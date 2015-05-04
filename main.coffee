@@ -21,11 +21,6 @@ class Symbol
     render: ->
         $("#"+@id).handsontable('getInstance').render()
 
-    update: (newData) ->
-        @data[0] = newData[0]
-        @data[1] = newData[1]
-        @render()
-
 # From GUI
 $blab.sym = []
 $blab.sym['A'] = new Symbol "A", [[1,2],[3,4]]
