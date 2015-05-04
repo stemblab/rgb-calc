@@ -1,24 +1,158 @@
-#!vanilla
 
-Array::table = ->
-    $("#z").handsontable({
-    data: [[0.1, 1, 2, 3, 4]]
-    startRows: 5,
-    startCols: 5,
-    minRows: 5,
-    minCols: 5,
-    maxRows: 10,
-    maxCols: 10,
+# Browser creates a Symbol object.  A symbol could be a table (with
+# headers) or a matrix, or some array of numeric(?) data. The
+# important attributes of a Symbol are its data and view. Symbol.data
+# is an Array object. Symbol.view is a displayed object in the DOM
+# (e.g., handontable).
+
+class Symbol
+
+    constructor: (@id, @data) ->
+
+        @view = $("#"+@id).handsontable
+            data: @data
+            startRows: @data.length
+            startCols: @data[0].length
+            rowHeaders: true
+            colHeaders: true 
+            contextMenu: true
+            columns: ({type: 'numeric'} for k in [1..@data[0].length])
+
+    render: ->
+        $("#"+@id).handsontable('getInstance').render()
+
+    update: (newData) ->
+        @data[0] = newData[0]
+        @data[1] = newData[1]
+        @render()
+
+# From GUI
+$blab.sym = []
+$blab.sym['A'] = new Symbol "A", [[1,2],[3,4]]
+$blab.sym['x'] = new Symbol "x", [[5],[6]] 
+$blab.sym['b'] = new Symbol "b", [[]]
+
+# In user coffeescript
+
+# For convenience
+A = $blab.sym['A'].data
+x = $blab.sym['x'].data
+b = $blab.sym['b'].data
+
+# User code
+fn = (A, x) ->
+    A.dot x
+    
+b = fn(A, x)
+
+# I'd hoped that sym['b'].data would update by reference, but it seems
+# like the last line has broken the link. So:
+$blab.sym['b'].data[0] = b[0]
+$blab.sym['b'].data[1] = b[1]
+
+# puzlet updates on compute
+$blab.sym['b'].render()
+
+
+# compute from browser
+ 
+$("#comp").on "click", => 
+
+    b = fn(A, x)
+
+    $blab.sym['b'].data[0] = b[0]
+    $blab.sym['b'].data[1] = b[1]
+    $blab.sym['b'].render()
+
+
+
+#---------------------SCRAP---------------------------------#
+
+
+###
+class Table
+
+    constructor: (@spec) ->
+
+        @hot = $(@spec.id).handsontable
+            data: @spec.data
+            startRows: @spec.data.length
+            startCols: @spec.data[0].length
+            rowHeaders: true
+            colHeaders: true 
+            contextMenu: true
+
+    render: ->
+
+        $(@spec.id).handsontable('getInstance').render()
+
+
+
+data = []
+table = []
+
+data['A'] = [[1,2],[3,4]]
+data['x'] = [[5],[6]]
+data['b'] = [[]]
+
+table['A'] = new Table {id:"#A", data:data['A']}
+table['x'] = new Table {id:"#x", data:data['x']}
+table['b'] = new Table {id:"#b", data:data['b']}
+b = data['A'].dot data['x']
+#data['b'] = b
+data['b'][0] = b[0]
+data['b'][1] = b[1] 
+table['b'].render()
+###
+
+    
+###        
+
+Array::table = (spec) ->
+    $(spec.id).handsontable({
+    data: this
+    startRows: this[0].length,
+    startCols: this.length,
+    minRows: 1,
+    minCols: 1,
     rowHeaders: true,
-    colHeaders: true,
-    minSpareRows: 1,
+    colHeaders: spec.colHeaders,
+    minSpareRows: 0,
     contextMenu: true
     })
 
-z = [0, 1, 2, 3, 4]
-z.table()
+data = []
 
-console.log "z", z
+data['z'] = [[0, 1, 2, 3, 4],[5, 6, 7, 8, 9]]
+data['z'].table
+    id: "#" + 'z'
+    colHeaders: ['i','ii','iii','iv','v']
+
+$("#z").draggable()
+
+data['y'] = [[0, 0, 0, 0, 0],[0, 0, 0, 0, 0]]
+data['y'].table
+    id: "#" + 'y'
+    colHeaders: true
+
+
+console.log "z", data['z']
+
+eval("z=data['z']")
+
+console.log "zzz", z
+
+$("#step10").on "click", => 
+    #console.log "z", data['z']
+    for r in [0...data['z'].length]
+        for c in [0...data['z'][0].length]
+            data['y'][r][c] = data['z'][r][c]
+    console.log "data y", data['y']
+    $('#y').handsontable('getInstance').render()
+    console.log "????????"
+
+###
+
 
 #hotInstance = $("#hot").handsontable('getInstance');
 #console.log "hotInstance", hotInstance
