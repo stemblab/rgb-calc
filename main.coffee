@@ -2,6 +2,7 @@
 
 Array::table = ->
     $("#z").handsontable({
+    data: [[0.1, 1, 2, 3, 4]]
     startRows: 5,
     startCols: 5,
     minRows: 5,
