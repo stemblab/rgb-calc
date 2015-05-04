@@ -1,5 +1,67 @@
 #!vanilla
 
+Array::table = ->
+    $("#z").handsontable({
+    startRows: 5,
+    startCols: 5,
+    minRows: 5,
+    minCols: 5,
+    maxRows: 10,
+    maxCols: 10,
+    rowHeaders: true,
+    colHeaders: true,
+    minSpareRows: 1,
+    contextMenu: true
+    })
+
+z = [0, 1, 2, 3, 4]
+z.table()
+
+console.log "z", z
+
+#hotInstance = $("#hot").handsontable('getInstance');
+#console.log "hotInstance", hotInstance
+#console.log "data", hotInstance.data
+#container.handsontable({data:[x]})
+#container.handsontable('getInstance').render()
+
+
+###
+
+container = $("#hot")
+
+container.handsontable
+
+container.handsontable({
+    startRows: 5,
+    startCols: 5,
+    minRows: 5,
+    minCols: 5,
+    maxRows: 10,
+    maxCols: 10,
+    rowHeaders: true,
+    colHeaders: true,
+    minSpareRows: 1,
+    contextMenu: true
+    })
+
+
+    
+console.log "hot", hot
+
+
+$("#step10").on "click", => 
+    x = [0.1, 1, 2, 3, 4]
+    console.log "x", x
+    #hotInstance = $("#hot").handsontable('getInstance');
+    #console.log "hotInstance", hotInstance
+    #console.log "data", hotInstance.data
+    container.handsontable({data:[x]})
+    container.handsontable('getInstance').render()
+
+#y = 2*x
+#data = [x, y]
+
 # Convert RGB to #hex value
 
 rgbToHex = (r, g, b) ->
@@ -24,6 +86,7 @@ getContrastYIQ = (hex) ->
 
 hexRenderer = (instance, td, row, col, prop, value, cellProperties) ->
     Handsontable.TextCell.renderer.apply this, arguments
+    console.log "this", this
     style = td.style
     # Apply new styles
     style.background = value
@@ -95,3 +158,4 @@ $('#exampleGrid').handsontable
 
 hot = $('#exampleGrid').handsontable('getInstance')
 
+###
