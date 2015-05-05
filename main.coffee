@@ -17,8 +17,6 @@ class Symbol
             colHeaders: true 
             contextMenu: true
             columns: ({type: 'numeric'} for k in [1..@data[0].length])
-        
-        @view.afterChange = => @change() if @change 
             
     render: -> @view.render()
         
