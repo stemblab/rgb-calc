@@ -6,10 +6,10 @@
 # (e.g., handontable).
 
 class Symbol
-
+    
     constructor: (@id, @data) ->
-
-        @view = $("#"+@id).handsontable
+        
+        @view = new Handsontable $("#"+@id)[0],
             data: @data
             startRows: @data.length
             startCols: @data[0].length
@@ -17,48 +17,40 @@ class Symbol
             colHeaders: true 
             contextMenu: true
             columns: ({type: 'numeric'} for k in [1..@data[0].length])
-
-    render: ->
-        $("#"+@id).handsontable('getInstance').render()
+            
+    render: -> @view.render()
+        
+    setData: (data) ->
+        @view.loadData data
+        @render()
 
 # From GUI
-$blab.sym = []
-$blab.sym['A'] = new Symbol "A", [[1,2],[3,4]]
-$blab.sym['x'] = new Symbol "x", [[5],[6]] 
-$blab.sym['b'] = new Symbol "b", [[]]
+symbol = (id, data) -> new Symbol id, data
+$blab.sym =
+    A: symbol "A", [[1,2],[3,4]]
+    x: symbol "x", [[5],[6]] 
+    b: symbol "b", [[]]
 
 # In user coffeescript
 
 # For convenience
-A = $blab.sym['A'].data
-x = $blab.sym['x'].data
-b = $blab.sym['b'].data
+sym = $blab.sym
+A = sym['A'].data
+x = sym['x'].data
+b = sym['b'].data
 
 # User code
 fn = (A, x) ->
     A.dot x
     
-b = fn(A, x)
-
-# I'd hoped that sym['b'].data would update by reference, but it seems
-# like the last line has broken the link. So:
-$blab.sym['b'].data[0] = b[0]
-$blab.sym['b'].data[1] = b[1]
-
-# puzlet updates on compute
-$blab.sym['b'].render()
-
+compute = ->
+    b = fn(A, x)
+    sym['b'].setData b
 
 # compute from browser
- 
-$("#comp").on "click", => 
+$("#comp").on "click", => compute()
 
-    b = fn(A, x)
-
-    $blab.sym['b'].data[0] = b[0]
-    $blab.sym['b'].data[1] = b[1]
-    $blab.sym['b'].render()
-
+compute()
 
 
 #---------------------SCRAP---------------------------------#
