@@ -17,18 +17,23 @@ class Symbol
             colHeaders: true 
             contextMenu: true
             columns: ({type: 'numeric'} for k in [1..@data[0].length])
+        
+        @view.afterChange = => @change() if @change 
             
     render: -> @view.render()
         
     setData: (data) ->
         @view.loadData data
         @render()
+        
+    afterChange: (@callback) ->
+        @view.addHook 'afterChange', => @callback()
 
 # From GUI
 symbol = (id, data) -> new Symbol id, data
 $blab.sym =
     A: symbol "A", [[1,2],[3,4]]
-    x: symbol "x", [[5],[6]] 
+    x: symbol "x", [[5],[6]]
     b: symbol "b", [[]]
 
 # In user coffeescript
@@ -47,8 +52,12 @@ compute = ->
     b = fn(A, x)
     sym['b'].setData b
 
+# Auto-compute after changing A and x
+sym['A'].afterChange (-> compute())
+sym['x'].afterChange (-> compute())
+
 # compute from browser
-$("#comp").on "click", => compute()
+#$("#comp").on "click", => compute()
 
 compute()
 
