@@ -1,6 +1,9 @@
 [
+    "/puzlet/js/d3.min.js",
+    "c3.min.js",
     "http://handsontable.com/dist/handsontable.full.js",
     "main.html",
     "main.css",
+    "c3.css",
     "main.coffee"
 ]
