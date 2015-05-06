@@ -1,5 +1,12 @@
 
-class BlabSymbol
+# A BlabSheet is an array of data augmented with row and column names
+# (i.e., how spreadsheets look. Better name?). If row/col names aren't
+# given, defaults are applied. Data can be extracted by various
+# methods: for instance, JSON data with the row headings as keys
+# (rowJson). The data provided by the methods is suitable for
+# digestion by other table/plotting classes.
+
+class BlabSheet
     
     constructor: (@spec) ->
 
@@ -15,26 +22,42 @@ class BlabSymbol
         else
             @rowHeaders = ('r'+k for k in [0...@data.length])
 
-    rowData: ->
+    rowJson: ->
         x = {}
-        y = $blab.sym['y']
         x[rh] = @data[k] for rh, k in @rowHeaders
         return x
 
+# BlabC3 is a convenience wrapper for c3.js; it takes a BlabSheet as
+# its argument. There are various other charting libraries (nvd3 for
+# d3.js) and these can be simularly wrapped.
 
-class BlabTable
+class BlabC3
+
+    constructor: (@sheet) ->
+
+        @chart = c3.generate(
+          bindto: '#chart'
+          data: json: @sheet.rowJson()
+          )
+
+    load: ->
+        @chart.load(json: @sheet.rowJson())
+
+# BlabHandsontable = wrapper for handsontable.js
+
+class BlabHandsontable
     
     constructor: (@spec) ->
 
-        @sym = @spec.sym
-        @data = @sym.data
+        @sheet = @spec.sheet
+        @data = @sheet.data
 
         @table = new Handsontable $("#"+@spec.id)[0],
             data: @data
             startRows: @data.length
             startCols: @data[0].length
-            rowHeaders: @sym.rowHeaders
-            colHeaders: @sym.colHeaders 
+            rowHeaders: @sheet.rowHeaders
+            colHeaders: @sheet.colHeaders 
             contextMenu: true
             columns: ({type: 'numeric'} for k in [1..@data[0].length])
 
@@ -47,64 +70,44 @@ class BlabTable
     afterChange: (@callback) ->
         @table.addHook 'afterChange', => @callback()
 
-
-class BlabFigure
-
-    constructor: (@sym) ->
-        
-        @chart = c3.generate(
-          bindto: '#chart'
-          data: json: @sym.rowData()
-          )
-
-    load: ->
-        @chart.load(json: @sym.rowData())
-        
-
+      
 ## From GUI
 
-# symbols
+# sheets
 
-symbol = (id, data) -> new BlabSymbol {id:id, data:data}
-$blab.sym =
-    A: symbol "A", [[1,2],[3,4]]
-    x: symbol "x", [[5],[6]]
-    b: symbol "b", [[]]
-    y: symbol "y", [[30, 200, 100, 400, 150, 250],[50,  20,  10,  40,  15,  25]]
+sh = (id, data) -> new BlabSheet {id:id, data:data}
+$blab.sheet =
+    A: sh "A", [[1,2],[3,4]]
+    x: sh "x", [[5],[6]]
+    b: sh "b", [[0],[0]]
+    y: sh "y", [[30, 200, 100, 400, 150, 250],[50,  20,  10,  40,  15,  25]]
 
-$blab.sym['y'].rowHeaders = ['dA','dB']
-$blab.sym['y'].colHeaders = ['i','ii','iii','iv','v','vi']
+$blab.sheet['y'].rowHeaders = ['dA','dB']
+$blab.sheet['y'].colHeaders = ['i','ii','iii','iv','v','vi']
 
 # tables
 
-table = (id) -> new BlabTable {sym:$blab.sym[id], id:id}
-$blab.tab =
-    A: table "A"
-    x: table "x"
-    b: table "b"
-    y: table "y"
+tab = (id) -> new BlabHandsontable {sheet:$blab.sheet[id], id:id}
+$blab.table =
+    A: tab "A"
+    x: tab "x"
+    b: tab "b"
+    y: tab "y"
 
 # figures
 
-$blab.fig = []  
-$blab.fig['fig1'] = new BlabFigure $blab.sym['y'] 
-$blab.sym['y'].data = [[30, 200, 100, 0, 150, 250],[50,  20,  10,  40,  15,  25]]
-$blab.fig['fig1'].load()
+$blab.figure = []  
+$blab.figure['y'] = new BlabC3 $blab.sheet['y'] 
     
 ## user coffeescript
 
 # For convenience
 
-sym = $blab.sym
-tab = $blab.tab
-
-#A = sym['A'].data
-#x = sym['x'].data
-#b = sym['b'].data
-
-#console.log sym
-for s, d of sym
-    eval(s + " = sym['" + s + "'].data")
+sheet = $blab.sheet
+table = $blab.table
+figure = $blab.figure
+for s, d of sheet
+    eval(s + " = sheet['" + s + "'].data") # !!! local vars !!!
 
 # User code
 fn = (A, x) ->
@@ -112,15 +115,11 @@ fn = (A, x) ->
     
 compute = ->
     b = fn(A, x)
-    tab['b'].setData b
-
-# Auto-compute after changing A and x
-tab['A'].afterChange (-> compute())
-tab['x'].afterChange (-> compute())
+    table['b'].setData b
 
 compute()
 
-
-
-
-
+# table updates
+table['A'].afterChange (-> compute())
+table['x'].afterChange (-> compute())
+table['y'].afterChange (-> figure['y'].load())
