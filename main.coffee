@@ -37,22 +37,21 @@ class BlabC3
     constructor: (@sheet) ->
 
         @chart = c3.generate(
-          bindto: '#chart'
+          bindto: $(".y.figure")[0]
           data: json: @sheet.rowJson()
           )
 
-    load: ->
+    update: ->
         @chart.load(json: @sheet.rowJson())
-
 
 # BlabHandsontable = wrapper for handsontable.js
 
 class BlabHandsontable
     
-    constructor: (@spec) ->
+    constructor: (@sheet, @spec) ->
 
-        @sheet = @spec.sheet
-        @data = @sheet.data
+        #@sheet = @spec.sheet
+        @data = @sheet.data # @data not by reference
 
         @table = new Handsontable $("#"+@spec.id)[0],
             data: @data
@@ -62,15 +61,23 @@ class BlabHandsontable
             colHeaders: @sheet.colHeaders 
             contextMenu: true
             columns: ({type: 'numeric'} for k in [1..@data[0].length])
+            afterChange: (change, source) ->
+                compute() if source is "edit"
 
-    render: -> @table.render()
+    #render: -> @table.render()
         
-    setData: (data) ->
-        @table.loadData data
-        @render()
+    #setData: (data) ->
+    #    console.log "???", @data
+    #    @table.loadData data
+    #    @table.render()
+
+    update: ->
+        @data = @sheet.data
+        @table.loadData @data
+        @table.render()
         
-    afterChange: (@callback) ->
-        @table.addHook 'afterChange', => @callback()
+    #afterChange: (@callback) ->
+    #    @table.addHook 'afterChange', => @callback()
 
 
 class BlabSlider
@@ -98,6 +105,7 @@ class BlabSlider
             slide: (event, ui) =>
                 @report.val ui.value
                 @sheet.data[0][0] = ui.value
+                $blab.figure['y'].update()
                 
         @report.val @slider.slider('value')
 
@@ -113,6 +121,7 @@ $blab.sheet =
     b: sh "b", [[0],[0]]
     y: sh "y", [[30, 200, 100, 400, 150, 250],[50,  20,  10,  40,  15,  25]]
     z: sh "z", [[50]]
+    q: sh "q", [[0, 0, 0, 0, 0, 0],[0, 0, 0, 0, 0, 0]]
 
 $blab.sheet['y'].rowHeaders = ['dA','dB']
 $blab.sheet['y'].colHeaders = ['i','ii','iii','iv','v','vi']
@@ -124,7 +133,7 @@ $blab.slider["z"] = new BlabSlider $blab.sheet["z"], {id: "z", width: 500}
 
 # tables
 
-tab = (id) -> new BlabHandsontable {sheet:$blab.sheet[id], id:id}
+tab = (id) -> new BlabHandsontable $blab.sheet[id], {id:id}
 $blab.table =
     A: tab "A"
     x: tab "x"
@@ -133,35 +142,36 @@ $blab.table =
 
 # figures
 
-$blab.figure = []  
-$blab.figure['y'] = new BlabC3 $blab.sheet['y'] 
+fig = (id) -> new BlabC3 $blab.sheet[id]
 
-# slider
+$blab.figure =
+    y: fig "y"
 
-$blab.slider = []
+# user code
 
+compute = ()->
+
+    # pre-code
     
-## user coffeescript
+    for s, d of $blab.sheet
+        eval(s + " = $blab.sheet['" + s + "'].data")
 
-# For convenience
-
-sheet = $blab.sheet
-table = $blab.table
-figure = $blab.figure
-for s, d of sheet
-    eval(s + " = sheet['" + s + "'].data") # !!! local vars !!!
-
-# User code
-fn = (A, x) ->
-    A.dot x
+    # user code
+    fn = (A, x) ->
+        A.dot x
     
-compute = ->
     b = fn(A, x)
-    table['b'].setData b
+
+    # post code
+
+    for s of $blab.sheet
+        eval("$blab.sheet['" + s + "'].data = " + s)
+
+    for t of $blab.table
+        $blab.table[t].update()
+
+    for f of $blab.figure
+        $blab.figure[f].update()
 
 compute()
 
-# table updates
-table['A'].afterChange (-> compute())
-table['x'].afterChange (-> compute())
-table['y'].afterChange (-> figure['y'].load())
