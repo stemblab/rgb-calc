@@ -1,12 +1,12 @@
 
-# A BlabSheet is an array of data augmented with row and column names
+# A Sheet is an array of data augmented with row and column names
 # (i.e., how spreadsheets look. Better name?). If row/col names aren't
 # given, defaults are applied. Data can be extracted by various
 # methods: for instance, JSON data with the row headings as keys
 # (rowJson). The data provided by the methods is suitable for
 # digestion by other table/plotting classes.
 
-class BlabSheet
+class Sheet
     
     constructor: (@spec) ->
 
@@ -27,33 +27,37 @@ class BlabSheet
         x[rh] = @data[k] for rh, k in @rowHeaders
         return x
 
+    toLocal: ->
+        eval(@spec.id + " = $blab.sheet['" + @spec.id + "'].data")
+
+    fromLocal: ->
+        console.log "???", "$blab.sheet['" + @spec.id + "'].data = " + @spec.id
+        eval("$blab.sheet['" + @spec.id + "'].data = " + @spec.id)
     
-# BlabC3 is a convenience wrapper for c3.js; it takes a BlabSheet as
-# its argument. There are various other charting libraries (nvd3 for
-# d3.js) and these can be simularly wrapped.
 
-class BlabC3
+class Plot
 
-    constructor: (@sheet) ->
+    constructor: (@spec) ->
+
+        @sheet = $blab.sheet[@spec.id]
 
         @chart = c3.generate(
-          bindto: $(".y.figure")[0]
+          bindto: $("[data-sym=#{@spec.id}][data-type='figure']")[0]
           data: json: @sheet.rowJson()
-          )
+        )
 
     update: ->
         @chart.load(json: @sheet.rowJson())
 
-# BlabHandsontable = wrapper for handsontable.js
 
-class BlabHandsontable
+class Table
     
-    constructor: (@sheet, @spec) ->
+    constructor: (@spec) ->
 
-        #@sheet = @spec.sheet
-        @data = @sheet.data # @data not by reference
+        @sheet = $blab.sheet[@spec.id]
+        @data = @sheet.data
 
-        @table = new Handsontable $("#"+@spec.id)[0],
+        @table = new Handsontable $("[data-sym=#{@spec.id}][data-type='table']")[0],
             data: @data
             startRows: @data.length
             startCols: @data[0].length
@@ -64,27 +68,17 @@ class BlabHandsontable
             afterChange: (change, source) ->
                 compute() if source is "edit"
 
-    #render: -> @table.render()
-        
-    #setData: (data) ->
-    #    console.log "???", @data
-    #    @table.loadData data
-    #    @table.render()
-
     update: ->
         @data = @sheet.data
         @table.loadData @data
         @table.render()
         
-    #afterChange: (@callback) ->
-    #    @table.addHook 'afterChange', => @callback()
 
-
-class BlabSlider
+class Slider
 
     constructor: (@sheet, @spec) ->
-
-        @container = $("#"+@spec.id)
+        
+        @container = $("[data-sym=#{@spec.id}][data-type='slider']")
         @container.css("width", @spec.width)
 
         @container.append("<div class='slider'></div>")
@@ -98,23 +92,25 @@ class BlabSlider
         @report = @container.find('.report')
 
         @slider.slider
-            value: 100
+            value: 1
             min: 0
-            max: 500
-            step: 50
+            max: 10
+            step: 1
             slide: (event, ui) =>
                 @report.val ui.value
-                @sheet.data[0][0] = ui.value
-                $blab.figure['y'].update()
+                compute()
                 
         @report.val @slider.slider('value')
+
+    update: ->
+        $blab.sheet[@spec.id].data[0][0] = @slider.slider('value')
 
    
 ## From GUI
 
 # sheets
 
-sh = (id, data) -> new BlabSheet {id:id, data:data}
+sh = (id, data) -> new Sheet {id:id, data:data}
 $blab.sheet =
     A: sh "A", [[1,2],[3,4]]
     x: sh "x", [[5],[6]]
@@ -128,12 +124,13 @@ $blab.sheet['y'].colHeaders = ['i','ii','iii','iv','v','vi']
 
 # slider
 
-$blab.slider = []
-$blab.slider["z"] = new BlabSlider $blab.sheet["z"], {id: "z", width: 500}
+slid = (id) -> new Slider $blab.sheet[id], {id:id , width: 500}
+$blab.slider =
+    z: slid "z"
 
 # tables
 
-tab = (id) -> new BlabHandsontable $blab.sheet[id], {id:id}
+tab = (id) -> new Table {id:id}
 $blab.table =
     A: tab "A"
     x: tab "x"
@@ -142,30 +139,41 @@ $blab.table =
 
 # figures
 
-fig = (id) -> new BlabC3 $blab.sheet[id]
+fig = (id) -> new Plot {id:id}
 
 $blab.figure =
-    y: fig "y"
+    q: fig "q"
 
 # user code
 
 compute = ()->
 
-    # pre-code
-    
-    for s, d of $blab.sheet
-        eval(s + " = $blab.sheet['" + s + "'].data")
+    ## pre-code
 
-    # user code
+    # refresh sink sheets
+    for sl of $blab.slider
+        $blab.slider[sl].update()
+
+    # local copy of vars 
+    for sh of $blab.sheet
+        $blab.sheet[sh].toLocal()
+
+    ## user code
+
     fn = (A, x) ->
         A.dot x
     
     b = fn(A, x)
 
-    # post code
+    q = y*z[0][0]
 
+    ## post code
+
+    # update stuff
+    # 
     for s of $blab.sheet
         eval("$blab.sheet['" + s + "'].data = " + s)
+        #$blab.sheet[s].fromLocal()
 
     for t of $blab.table
         $blab.table[t].update()

@@ -1,31 +1,32 @@
 <div id="text">
 
+  Matrix $A$ is editable. Page computes on [enter].
 
-  <div id="z"> </div>
+  <div data-sym="A" data-type="table"></div>
 
-  <hr>
+  Same for vector $x$. 
 
-  Matrix $A$:
+  <div data-sym="x" data-type="table"></div>
 
-  <div id="A"></div>
+  Output is $b=Ax$ (defined in user code).
 
-  Vector $x$:
-
-  <div id="x"></div>
-
-  Vector $b=Ax$
-
-  <div id="b"></div>
+  <div data-sym="b" data-type="table"></div>
 
   <hr>
 
-  Table y
+  Table y shows has labeled rows and columns.
 
-  <div id="y"></div>
+  <div data-sym="y" data-type="table"></div>
 
-  Figure y
+  In the user code, variable q is the product of the table data above and the slider. q is plotted below.
 
-  <div class="y figure"></div>
+  <div data-sym="q" data-type="figure"></div>
+
+  <hr>
+
+  The slider updates the plot (but not on first click for some reason).
+
+  <div data-sym="z" data-type="slider"></div>
 
 </div>
 
