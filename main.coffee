@@ -1,26 +1,14 @@
 
-# A Sheet is an array of data augmented with row and column names
-# (i.e., how spreadsheets look. Better name?). If row/col names aren't
-# given, defaults are applied. Data can be extracted by various
-# methods: for instance, JSON data with the row headings as keys
-# (rowJson). The data provided by the methods is suitable for
-# digestion by other table/plotting classes.
-
 class Sheet
     
-    constructor: (@spec) ->
+    constructor: (@spec, @data, @colHeaders, @rowHeaders) ->
 
-        @data = @spec.data
+        @data ?= [[0]]
+        numCols = @data[0].length
+        numRows = @data.length
 
-        if @spec.colHeaders?
-            @colHeaders = @spec.colHeaders
-        else
-            @colHeaders = ('c'+k for k in [0...@data[0].length])
-
-        if @spec.rowHeaders?
-            @rowHeaders = @spec.rowHeaders
-        else
-            @rowHeaders = ('r'+k for k in [0...@data.length])
+        @colHeaders ?= ("c#{k}" for k in [0...numCols])
+        @rowHeaders ?= ("r#{k}" for k in [0...numRows])
 
     rowJson: ->
         x = {}
@@ -28,89 +16,117 @@ class Sheet
         return x
 
     toLocal: ->
-        eval(@spec.id + " = $blab.sheet['" + @spec.id + "'].data")
+        eval("#{@spec.id} = $blab.sheet['#{@spec.id}'].data")
 
-    fromLocal: ->
-        console.log "???", "$blab.sheet['" + @spec.id + "'].data = " + @spec.id
-        eval("$blab.sheet['" + @spec.id + "'].data = " + @spec.id)
-    
+    fromLocal: (u)->
+        $blab.sheet[@spec.id].data = u
 
-class Plot
+    stringify: ->
+        s = JSON.stringify(@spec)
+        d = JSON.stringify(@data)
+        r = JSON.stringify(@rowHeaders)
+        c = JSON.stringify(@colHeaders)
+        "{spec:#{s}, data:#{d}, rowHeaders:#{r}, colHeaders:#{c}}"
+        
+class Figure
 
     constructor: (@spec) ->
 
         @sheet = $blab.sheet[@spec.id]
-
+        container = $("[data-sym=#{@spec.id}][data-type='figure']")[0]
+        
         @chart = c3.generate(
-          bindto: $("[data-sym=#{@spec.id}][data-type='figure']")[0]
-          data: json: @sheet.rowJson()
+            bindto: container
+            data: json: @sheet.rowJson()
         )
 
     update: ->
         @chart.load(json: @sheet.rowJson())
 
+    stringify: ->
+        JSON.stringify($blab.figure[@spec.id]["spec"])
+
 
 class Table
-    
+
     constructor: (@spec) ->
 
-        @sheet = $blab.sheet[@spec.id]
-        @data = @sheet.data
+        sheet = $blab.sheet[@spec.id]
 
-        @table = new Handsontable $("[data-sym=#{@spec.id}][data-type='table']")[0],
-            data: @data
-            startRows: @data.length
-            startCols: @data[0].length
-            rowHeaders: @sheet.rowHeaders
-            colHeaders: @sheet.colHeaders 
+        data = sheet.data
+        numRows = data.length
+        numCols = data[0].length
+        container = $("[data-sym=#{@spec.id}][data-type='table']")[0]
+
+        @table = new Handsontable container,
+            data: data
+            startRows: numRows
+            startCols: numCols
+            rowHeaders: sheet.rowHeaders
+            colHeaders: sheet.colHeaders 
             contextMenu: true
-            columns: ({type: 'numeric'} for k in [1..@data[0].length])
-            afterChange: (change, source) ->
-                compute() if source is "edit"
+            columns: ({type: 'numeric'} for k in [1..numCols])
+            afterChange: (change, source) =>
+                compute() if source is "edit" and @spec.compute
 
     update: ->
-        @data = @sheet.data
-        @table.loadData @data
+        @table.loadData $blab.sheet[@spec.id].data
         @table.render()
         
+    stringify: ->
+        JSON.stringify($blab.table[@spec.id]["spec"])
+
 
 class Slider
 
-    constructor: (@sheet, @spec) ->
+    constructor: (@spec) ->
+
+        @spec.width ?= 500
+        @spec.value ?= 1
+        @spec.min ?= 0
+        @spec.max ?= 10
+        @spec.step ?= 1
+
+        sheet = $blab.sheet[@spec.id]
         
-        @container = $("[data-sym=#{@spec.id}][data-type='slider']")
-        @container.css("width", @spec.width)
+        container = $("[data-sym=#{@spec.id}][data-type='slider']")
+        container.css("width", @spec.width)
+        container.append("<div class='slider'></div>")
+        container.append("<div class='label'></div>")
+        container.append("<input type='text' readonly class='report'>")
 
-        @container.append("<div class='slider'></div>")
-        @slider = @container.find('.slider')
+        label = container.find('.label')
+        label.html(sheet.rowHeaders[0])
 
-        @container.append("<div class='label'></div>")
-        @label = @container.find('.label')
-        @label.html(@sheet.rowHeaders[0])
+        report = container.find('.report')
 
-        @container.append("<input type='text' readonly class='report'>")
-        @report = @container.find('.report')
-
+        @slider = container.find('.slider')
         @slider.slider
-            value: 1
-            min: 0
-            max: 10
-            step: 1
-            slide: (event, ui) =>
-                @report.val ui.value
-                compute()
+            value: @spec.value
+            min: @spec.min
+            max: @spec.max
+            step: @spec.step
+            change: (event, ui) =>
+                report.val ui.value
+                compute() if @spec.compute
                 
-        @report.val @slider.slider('value')
+        report.val @slider.slider("value")
 
     update: ->
-        $blab.sheet[@spec.id].data[0][0] = @slider.slider('value')
+        $blab.sheet[@spec.id].data[0][0] =  @slider.slider("value")
 
+    stringify: ->
+        JSON.stringify($blab.slider[@spec.id]["spec"])
    
 ## From GUI
 
 # sheets
 
-sh = (id, data) -> new Sheet {id:id, data:data}
+$blab.sheet = []
+sh = (id, data) -> new Sheet {id:id}, data #{id:id, data:data}
+
+$blab.sheet["A"] = sh "A", [[1,2],[3,4]]
+
 $blab.sheet =
     A: sh "A", [[1,2],[3,4]]
     x: sh "x", [[5],[6]]
@@ -118,19 +134,30 @@ $blab.sheet =
     y: sh "y", [[30, 200, 100, 400, 150, 250],[50,  20,  10,  40,  15,  25]]
     z: sh "z", [[50]]
     q: sh "q", [[0, 0, 0, 0, 0, 0],[0, 0, 0, 0, 0, 0]]
+    u: sh "u"
 
 $blab.sheet['y'].rowHeaders = ['dA','dB']
 $blab.sheet['y'].colHeaders = ['i','ii','iii','iv','v','vi']
 
+#console.log "!!!", $blab.sheet
+
 # slider
 
-slid = (id) -> new Slider $blab.sheet[id], {id:id , width: 500}
+slid = (id) -> new Slider
+    id:id
+    width: 500
+    value: 1
+    min: 0
+    max: 10
+    step: 1
+    compute: true
+
 $blab.slider =
     z: slid "z"
 
 # tables
 
-tab = (id) -> new Table {id:id}
+tab = (id) -> new Table {id:id, compute:true}
 $blab.table =
     A: tab "A"
     x: tab "x"
@@ -139,10 +166,15 @@ $blab.table =
 
 # figures
 
-fig = (id) -> new Plot {id:id}
+fig = (id) -> new Figure {id:id}
 
 $blab.figure =
     q: fig "q"
+
+
+
+console.log "??stringify??", $blab.sheet["A"].stringify()
+
 
 # user code
 
@@ -154,8 +186,11 @@ compute = ()->
     for sl of $blab.slider
         $blab.slider[sl].update()
 
+    console.log "z???", $blab.sheet["z"].data
+
     # local copy of vars 
     for sh of $blab.sheet
+        #console.log "sh", sh
         $blab.sheet[sh].toLocal()
 
     ## user code
@@ -172,8 +207,7 @@ compute = ()->
     # update stuff
     # 
     for s of $blab.sheet
-        eval("$blab.sheet['" + s + "'].data = " + s)
-        #$blab.sheet[s].fromLocal()
+        $blab.sheet[s].fromLocal(eval(s))
 
     for t of $blab.table
         $blab.table[t].update()
