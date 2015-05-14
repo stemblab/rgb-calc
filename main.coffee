@@ -15,6 +15,9 @@ class Sheet
         x[rh] = @data[k] for rh, k in @rowHeaders
         return x
 
+    labelRows: ->
+        ([@rowHeaders[m]].concat row for row, m in @data)
+
     toLocal: ->
         eval("#{@spec.id} = $blab.sheet['#{@spec.id}'].data")
 
@@ -28,20 +31,61 @@ class Sheet
         c = JSON.stringify(@colHeaders)
         "{spec:#{s}, data:#{d}, rowHeaders:#{r}, colHeaders:#{c}}"
         
-class Figure
+class Figure1
 
     constructor: (@spec) ->
 
         @sheet = $blab.sheet[@spec.id]
         container = $("[data-sym=#{@spec.id}][data-type='figure']")[0]
-        
+
         @chart = c3.generate(
             bindto: container
-            data: json: @sheet.rowJson()
+            data:
+                json: @sheet.rowJson()
+                types: 
+                    one: 'area'
+                    two: 'area-spline'
         )
 
     update: ->
         @chart.load(json: @sheet.rowJson())
+
+    stringify: ->
+        JSON.stringify($blab.figure[@spec.id]["spec"])
+
+
+class PlotXY
+
+    constructor: (@spec) ->
+
+        @X = $blab.sheet[@spec.Xid]
+        @Y = $blab.sheet[@spec.Yid]
+
+        container = $("##{@spec.id}")[0]
+
+        @chart = c3.generate(
+            bindto: container
+            data:
+                columns: @getData()
+                types: 
+                    one: 'area'
+                    two: 'area-spline'
+        )
+
+        console.log "headers", @X.rowHeaders[0]
+        console.log "data", [@X.labelRows()[0]].concat @Y.labelRows()
+        console.log "@Y", @Y
+
+    getData: ->
+        columns = [@X.labelRows()[0]].concat @Y.labelRows()
+        if c[0] == columns[0][0] for c in columns[1..]
+            console.log "!!! WARNING X and Y row labels clash !!!" 
+        x: @X.rowHeaders[0],
+        columns: columns
+
+    update: ->
+        console.log "update XY", @spec.id, @getData()
+        @chart.load(@getData())
 
     stringify: ->
         JSON.stringify($blab.figure[@spec.id]["spec"])
@@ -135,11 +179,17 @@ $blab.sheet =
     z: sh "z", [[50]]
     q: sh "q", [[0, 0, 0, 0, 0, 0],[0, 0, 0, 0, 0, 0]]
     u: sh "u"
+    x1: sh "x1", [[30, 50, 100, 230, 300, 310]]
+    y1: sh "y1", [[30, 200, 100, 400, 150, 250], [130, 300, 200, 300, 250, 450]]
 
 $blab.sheet['y'].rowHeaders = ['dA','dB']
 $blab.sheet['y'].colHeaders = ['i','ii','iii','iv','v','vi']
 
-#console.log "!!!", $blab.sheet
+$blab.sheet['q'].rowHeaders = ['one','two']
+$blab.sheet['q'].colHeaders = ['i','ii','iii','iv','v','vi']
+
+
+#console.log "!!!", $blab.sheet["y"].labelRows()
 
 # slider
 
@@ -166,14 +216,16 @@ $blab.table =
 
 # figures
 
-fig = (id) -> new Figure {id:id}
+fig = (id) -> new Figure1 {id:id}
+
+xy = (id) -> new PlotXY {id:id, Xid:"x1", Yid:"q"} #, $blab.sheet["x1"], $blab.sheet["y"]
 
 $blab.figure =
     q: fig "q"
+    fig2: xy "fig2"
 
 
-
-console.log "??stringify??", $blab.sheet["A"].stringify()
+#console.log "??stringify??", $blab.sheet["A"].stringify()
 
 
 # user code
@@ -186,7 +238,7 @@ compute = ()->
     for sl of $blab.slider
         $blab.slider[sl].update()
 
-    console.log "z???", $blab.sheet["z"].data
+    #console.log "z???", $blab.sheet["z"].data
 
     # local copy of vars 
     for sh of $blab.sheet
@@ -202,18 +254,30 @@ compute = ()->
 
     q = y*z[0][0]
 
+    #console.log "y", y
+
+    #y = [[1, 2, 3, 4, 5, 6],[6, 5, 4, 3, 2, 1]]
+
+    #console.log "y", y
+    #console.log "q", q
+
     ## post code
 
+    console.log "######## post-code ########"
+
     # update stuff
-    # 
+
     for s of $blab.sheet
         $blab.sheet[s].fromLocal(eval(s))
 
     for t of $blab.table
         $blab.table[t].update()
 
+    #console.log "blab-figure", $blab.figure
     for f of $blab.figure
+        #console.log "start", f
         $blab.figure[f].update()
+        #console.log "stop", f
 
 compute()
 
