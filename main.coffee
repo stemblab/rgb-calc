@@ -58,34 +58,20 @@ class PlotXY
 
     constructor: (@spec) ->
 
-        @X = $blab.sheet[@spec.Xid]
-        @Y = $blab.sheet[@spec.Yid]
-
-        container = $("##{@spec.id}")[0]
+        @spec.data["columns"] = @getCols()
 
         @chart = c3.generate(
-            bindto: container
-            data:
-                columns: @getData()
-                types: 
-                    one: 'area'
-                    two: 'area-spline'
+            bindto: $("##{@spec.id}")[0]
+            data: @spec.data
         )
 
-        console.log "headers", @X.rowHeaders[0]
-        console.log "data", [@X.labelRows()[0]].concat @Y.labelRows()
-        console.log "@Y", @Y
-
-    getData: ->
-        columns = [@X.labelRows()[0]].concat @Y.labelRows()
-        if c[0] == columns[0][0] for c in columns[1..]
-            console.log "!!! WARNING X and Y row labels clash !!!" 
-        x: @X.rowHeaders[0],
-        columns: columns
+    getCols: ->
+        cols = []
+        cols.push c for c in sheet.labelRows() for sheet in @spec.data.sheets
+        columns: cols
 
     update: ->
-        console.log "update XY", @spec.id, @getData()
-        @chart.load(@getData())
+        @chart.load(@getCols())
 
     stringify: ->
         JSON.stringify($blab.figure[@spec.id]["spec"])
@@ -218,11 +204,18 @@ $blab.table =
 
 fig = (id) -> new Figure1 {id:id}
 
-xy = (id) -> new PlotXY {id:id, Xid:"x1", Yid:"q"} #, $blab.sheet["x1"], $blab.sheet["y"]
+xy =  -> new PlotXY
+    id: "fig2"
+    data:
+        sheets: [$blab.sheet["x1"], $blab.sheet["q"]]
+        x: "r0"
+        types: 
+            one: 'area'
+            two: 'area-spline'
 
 $blab.figure =
     q: fig "q"
-    fig2: xy "fig2"
+    fig2: xy()
 
 
 #console.log "??stringify??", $blab.sheet["A"].stringify()
