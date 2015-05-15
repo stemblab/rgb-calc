@@ -30,35 +30,12 @@ class Sheet
         r = JSON.stringify(@rowHeaders)
         c = JSON.stringify(@colHeaders)
         "{spec:#{s}, data:#{d}, rowHeaders:#{r}, colHeaders:#{c}}"
-        
-class Figure1
-
-    constructor: (@spec) ->
-
-        @sheet = $blab.sheet[@spec.id]
-        container = $("[data-sym=#{@spec.id}][data-type='figure']")[0]
-
-        @chart = c3.generate(
-            bindto: container
-            data:
-                json: @sheet.rowJson()
-                types: 
-                    one: 'area'
-                    two: 'area-spline'
-        )
-
-    update: ->
-        @chart.load(json: @sheet.rowJson())
-
-    stringify: ->
-        JSON.stringify($blab.figure[@spec.id]["spec"])
-
 
 class PlotXY
 
     constructor: (@spec) ->
-
-        @spec.data["columns"] = @getCols()
+        
+        @spec.data["columns"] = @getCols() # c3-style data
 
         @chart = c3.generate(
             bindto: $("##{@spec.id}")[0]
@@ -75,7 +52,6 @@ class PlotXY
 
     stringify: ->
         JSON.stringify($blab.figure[@spec.id]["spec"])
-
 
 class Table
 
@@ -175,8 +151,6 @@ $blab.sheet['q'].rowHeaders = ['one','two']
 $blab.sheet['q'].colHeaders = ['i','ii','iii','iv','v','vi']
 
 
-#console.log "!!!", $blab.sheet["y"].labelRows()
-
 # slider
 
 slid = (id) -> new Slider
@@ -202,23 +176,27 @@ $blab.table =
 
 # figures
 
-fig = (id) -> new Figure1 {id:id}
+fig1 =  -> new PlotXY
+    id: "fig1"
+    data:
+        sheets: [$blab.sheet["q"]]
+        x: ""
+        types: 
+            one: 'area'
+            two: 'area-spline'
 
-xy =  -> new PlotXY
+fig2 =  -> new PlotXY
     id: "fig2"
     data:
         sheets: [$blab.sheet["x1"], $blab.sheet["q"]]
         x: "r0"
         types: 
-            one: 'area'
-            two: 'area-spline'
+            one: 'spline'
+            two: 'line'
 
 $blab.figure =
-    q: fig "q"
-    fig2: xy()
-
-
-#console.log "??stringify??", $blab.sheet["A"].stringify()
+    fig1: fig1()
+    fig2: fig2()
 
 
 # user code
