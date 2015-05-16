@@ -8,39 +8,27 @@ class Widget
         JSON.stringify(@spec)
 
 
-class Sheet
+class Sheet extends Widget
     
-    constructor: (@spec, @data, @colHeaders, @rowHeaders) ->
+    constructor: (@spec) ->
 
-        @data ?= [[0]]
-        numCols = @data[0].length
-        numRows = @data.length
-
-        @colHeaders ?= ("c#{k}" for k in [0...numCols])
-        @rowHeaders ?= ("r#{k}" for k in [0...numRows])
+        @spec.data ?= [[0]]
+        @colHeaders ?= ("c#{k}" for k in [0...@spec.data[0].length])
+        @rowHeaders ?= ("r#{k}" for k in [0...@spec.data.length])
 
     rowJson: ->
         x = {}
-        x[rh] = @data[k] for rh, k in @rowHeaders
+        x[rh] = @spec.data[k] for rh, k in @rowHeaders
         return x
 
     labelRows: ->
-        ([@rowHeaders[m]].concat row for row, m in @data)
+        ([@rowHeaders[m]].concat row for row, m in @spec.data)
 
     toLocal: ->
-        eval("#{@spec.id} = $blab.sheet['#{@spec.id}'].data")
+        eval("#{@spec.id} = $blab.sheet['#{@spec.id}'].spec.data")
 
     fromLocal: (u)->
-        $blab.sheet[@spec.id].data = u
-
-    stringify: ->
-        s = JSON.stringify(@spec)
-        d = JSON.stringify(@data)
-        r = JSON.stringify(@rowHeaders)
-        c = JSON.stringify(@colHeaders)
-        "{spec:#{s}, data:#{d}, rowHeaders:#{r}, colHeaders:#{c}}"
-
-
+        $blab.sheet[@spec.id].spec.data = u
 
 class PlotXY extends Widget
 
@@ -71,18 +59,18 @@ class Table extends Widget
         container = $("[data-sym=#{@spec.id}][data-type='table']")[0]
 
         @defaults =
-            data: @sheet.data
+            data: @sheet.spec.data
             afterChange: (change, source) =>
-                compute() if source is "edit" and @spec.compute
-            columns: ({type: 'numeric'} for k in [1..@sheet.data[0].length])
+                compute() if source is "edit" and @sheet.spec.compute
+            columns: ({type: 'numeric'} for k in [1..@sheet.spec.data[0].length])
             rowHeaders: @sheet.rowHeaders
             colHeaders: @sheet.colHeaders
             contextMenu: false
 
-        @table = new Handsontable container, $.extend({}, @defaults, @spec.table)
+        @table = new Handsontable container, $.extend({}, @defaults, @spec)
 
     update: ->
-        @table.loadData @sheet.data
+        @table.loadData @sheet.spec.data
         @table.render()
         
 
@@ -119,16 +107,14 @@ class Slider extends Widget
         @report.val @slider.slider("value")
 
     update: ->
-        @sheet.data[0][0] =  @slider.slider("value")
+        @sheet.spec.data[0][0] =  @slider.slider("value")
    
 ## From GUI
 
 # sheets
 
 $blab.sheet = []
-sh = (id, data) -> new Sheet {id:id}, data #{id:id, data:data}
-
-$blab.sheet["A"] = sh "A", [[1,2],[3,4]]
+sh = (id, data) -> new Sheet {id:id, data:data, compute: true}
 
 $blab.sheet =
     A: sh "A", [[1,2],[3,4]]
@@ -147,9 +133,6 @@ $blab.sheet['y'].colHeaders = ['i','ii','iii','iv','v','vi']
 $blab.sheet['q'].rowHeaders = ['one','two']
 $blab.sheet['q'].colHeaders = ['i','ii','iii','iv','v','vi']
 
-
-
-
 # slider
 
 slid = (id) -> new Slider
@@ -161,14 +144,12 @@ $blab.slider =
 
 # tables
 
-tab = (id) -> new Table {id:id, compute:true, table: {rowHeaders: false}}
+tab = (id) -> new Table {id:id, compute:true}
 $blab.table =
     A: tab "A"
     x: tab "x"
     b: tab "b"
     y: tab "y"
-
-
 
 # figures
 
@@ -194,26 +175,22 @@ $blab.figure =
     fig1: fig1()
     fig2: fig2()
 
-console.log $blab.slider["z"].stringify()
-
 # user code
+
 
 compute = ()->
 
-    ## pre-code
+    console.log "######## pre-code ########"
 
     # refresh sink sheets
     for sl of $blab.slider
         $blab.slider[sl].update()
 
-    #console.log "z???", $blab.sheet["z"].data
-
     # local copy of vars 
     for sh of $blab.sheet
-        #console.log "sh", sh
         $blab.sheet[sh].toLocal()
 
-    ## user code
+    console.log "######## user-code ########"
 
     fn = (A, x) ->
         A.dot x
@@ -222,30 +199,22 @@ compute = ()->
 
     q = y*z[0][0]
 
-    #console.log "y", y
-
-    #y = [[1, 2, 3, 4, 5, 6],[6, 5, 4, 3, 2, 1]]
-
-    #console.log "y", y
-    #console.log "q", q
-
-    ## post code
-
     console.log "######## post-code ########"
 
-    # update stuff
-
+    console.log "#### sheets ####"
     for s of $blab.sheet
         $blab.sheet[s].fromLocal(eval(s))
+        console.log $blab.sheet[s].stringify()
 
+    console.log "#### tables ####"
     for t of $blab.table
         $blab.table[t].update()
+        console.log $blab.table[t].stringify()
 
-    #console.log "blab-figure", $blab.figure
+    console.log "#### figures ####"
     for f of $blab.figure
-        #console.log "start", f
         $blab.figure[f].update()
-        #console.log "stop", f
+        console.log $blab.figure[f].stringify()
 
 compute()
 
