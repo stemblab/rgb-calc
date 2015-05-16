@@ -1,3 +1,12 @@
+class Widget
+
+    constructor: ->
+
+    update: ->
+        
+    stringify: ->
+        JSON.stringify(@spec)
+
 
 class Sheet
     
@@ -31,98 +40,86 @@ class Sheet
         c = JSON.stringify(@colHeaders)
         "{spec:#{s}, data:#{d}, rowHeaders:#{r}, colHeaders:#{c}}"
 
-class PlotXY
+
+
+class PlotXY extends Widget
 
     constructor: (@spec) ->
-        
-        @spec.data["columns"] = @getCols() # c3-style data
+
+        @sheets = ($blab.sheet[id] for id in @spec.sheetIds)
+
+        defaults = {}
 
         @chart = c3.generate(
             bindto: $("##{@spec.id}")[0]
-            data: @spec.data
+            data: $.extend({}, defaults, @spec.data, @getCols())
         )
 
     getCols: ->
         cols = []
-        cols.push c for c in sheet.labelRows() for sheet in @spec.data.sheets
+        cols.push c for c in sheet.labelRows() for sheet in @sheets
         columns: cols
 
     update: ->
         @chart.load(@getCols())
 
-    stringify: ->
-        JSON.stringify($blab.figure[@spec.id]["spec"])
-
-class Table
-
+class Table extends Widget
+    
     constructor: (@spec) ->
 
-        sheet = $blab.sheet[@spec.id]
-
-        data = sheet.data
-        numRows = data.length
-        numCols = data[0].length
+        @sheet = $blab.sheet[@spec.id]
         container = $("[data-sym=#{@spec.id}][data-type='table']")[0]
 
-        @table = new Handsontable container,
-            data: data
-            startRows: numRows
-            startCols: numCols
-            rowHeaders: sheet.rowHeaders
-            colHeaders: sheet.colHeaders 
-            contextMenu: true
-            columns: ({type: 'numeric'} for k in [1..numCols])
+        @defaults =
+            data: @sheet.data
             afterChange: (change, source) =>
                 compute() if source is "edit" and @spec.compute
+            columns: ({type: 'numeric'} for k in [1..@sheet.data[0].length])
+            rowHeaders: @sheet.rowHeaders
+            colHeaders: @sheet.colHeaders
+            contextMenu: false
+
+        @table = new Handsontable container, $.extend({}, @defaults, @spec.table)
 
     update: ->
-        @table.loadData $blab.sheet[@spec.id].data
+        @table.loadData @sheet.data
         @table.render()
         
-    stringify: ->
-        JSON.stringify($blab.table[@spec.id]["spec"])
 
-
-class Slider
+class Slider extends Widget
 
     constructor: (@spec) ->
 
-        @spec.width ?= 500
-        @spec.value ?= 1
-        @spec.min ?= 0
-        @spec.max ?= 10
-        @spec.step ?= 1
+        @sheet = $blab.sheet[@spec.id]
 
-        sheet = $blab.sheet[@spec.id]
-        
-        container = $("[data-sym=#{@spec.id}][data-type='slider']")
-        container.css("width", @spec.width)
-        container.append("<div class='slider'></div>")
-        container.append("<div class='label'></div>")
-        container.append("<input type='text' readonly class='report'>")
+        @container = $("[data-sym=#{@spec.id}][data-type='slider']")
+        @container.append("<div class='slider'></div>")
+        @container.append("<div class='label'></div>")
+        @container.append("<input type='text' readonly class='report'>")
+        @report = @container.find('.report')
 
-        label = container.find('.label')
-        label.html(sheet.rowHeaders[0])
-
-        report = container.find('.report')
-
-        @slider = container.find('.slider')
-        @slider.slider
-            value: @spec.value
-            min: @spec.min
-            max: @spec.max
-            step: @spec.step
+        defaults =
+            width: 500
+            value: 1
+            min: 0
+            max: 10
+            step: 1
             change: (event, ui) =>
-                report.val ui.value
-                compute() if @spec.compute
-                
-        report.val @slider.slider("value")
+                @report.val ui.value
+                compute()
+
+        settings = $.extend({}, defaults, @spec)
+    
+        @container.find('.label').html(@sheet.rowHeaders[0])
+        @container.css("width", settings.width)
+        
+        @slider = @container.find('.slider')
+        @slider.slider settings
+
+        @report.val @slider.slider("value")
 
     update: ->
-        $blab.sheet[@spec.id].data[0][0] =  @slider.slider("value")
-
-    stringify: ->
-        JSON.stringify($blab.slider[@spec.id]["spec"])
+        @sheet.data[0][0] =  @slider.slider("value")
    
 ## From GUI
 
@@ -151,35 +148,34 @@ $blab.sheet['q'].rowHeaders = ['one','two']
 $blab.sheet['q'].colHeaders = ['i','ii','iii','iv','v','vi']
 
 
+
+
 # slider
 
 slid = (id) -> new Slider
     id:id
-    width: 500
-    value: 1
-    min: 0
-    max: 10
-    step: 1
-    compute: true
+    value: 3
 
 $blab.slider =
     z: slid "z"
 
 # tables
 
-tab = (id) -> new Table {id:id, compute:true}
+tab = (id) -> new Table {id:id, compute:true, table: {rowHeaders: false}}
 $blab.table =
     A: tab "A"
     x: tab "x"
     b: tab "b"
     y: tab "y"
 
+
+
 # figures
 
 fig1 =  -> new PlotXY
     id: "fig1"
+    sheetIds: ["q"]
     data:
-        sheets: [$blab.sheet["q"]]
         x: ""
         types: 
             one: 'area'
@@ -187,8 +183,8 @@ fig1 =  -> new PlotXY
 
 fig2 =  -> new PlotXY
     id: "fig2"
+    sheetIds: ["x1", "q"]
     data:
-        sheets: [$blab.sheet["x1"], $blab.sheet["q"]]
         x: "r0"
         types: 
             one: 'spline'
@@ -198,6 +194,7 @@ $blab.figure =
     fig1: fig1()
     fig2: fig2()
 
+console.log $blab.slider["z"].stringify()
 
 # user code
 
