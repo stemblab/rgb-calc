@@ -11,7 +11,6 @@ class Widget
 class Sheet extends Widget
     
     constructor: (@spec) ->
-
         @spec.data ?= [[0]]
         @colHeaders ?= ("c#{k}" for k in [0...@spec.data[0].length])
         @rowHeaders ?= ("r#{k}" for k in [0...@spec.data.length])
@@ -30,14 +29,12 @@ class Sheet extends Widget
     fromLocal: (u)->
         $blab.sheet[@spec.id].spec.data = u
 
+
 class PlotXY extends Widget
 
     constructor: (@spec) ->
-
         @sheets = ($blab.sheet[id] for id in @spec.sheetIds)
-
         defaults = {}
-
         @chart = c3.generate(
             bindto: $("##{@spec.id}")[0]
             data: $.extend({}, defaults, @spec.data, @getCols())
@@ -54,10 +51,8 @@ class PlotXY extends Widget
 class Table extends Widget
     
     constructor: (@spec) ->
-
         @sheet = $blab.sheet[@spec.id]
-        container = $("[data-sym=#{@spec.id}][data-type='table']")[0]
-
+        container = $("##{@spec.id}")[0]
         @defaults =
             data: @sheet.spec.data
             afterChange: (change, source) =>
@@ -66,7 +61,6 @@ class Table extends Widget
             rowHeaders: @sheet.rowHeaders
             colHeaders: @sheet.colHeaders
             contextMenu: false
-
         @table = new Handsontable container, $.extend({}, @defaults, @spec)
 
     update: ->
@@ -80,11 +74,17 @@ class Slider extends Widget
 
         @sheet = $blab.sheet[@spec.id]
 
-        @container = $("[data-sym=#{@spec.id}][data-type='slider']")
+        @container = $("##{@spec.id}")
         @container.append("<div class='slider'></div>")
         @container.append("<div class='label'></div>")
         @container.append("<input type='text' readonly class='report'>")
         @report = @container.find('.report')
+
+        @container.draggable()
+        @container.on 'drag', (event) =>
+            $('#myInput').val event.pageX + ',' + event.pageY
+            @spec.X = event.pageX
+            @spec.Y = event.pageY
 
         defaults =
             width: 500
@@ -133,6 +133,7 @@ $blab.sheet['y'].colHeaders = ['i','ii','iii','iv','v','vi']
 $blab.sheet['q'].rowHeaders = ['one','two']
 $blab.sheet['q'].colHeaders = ['i','ii','iii','iv','v','vi']
 
+
 # slider
 
 slid = (id) -> new Slider
@@ -141,6 +142,7 @@ slid = (id) -> new Slider
 
 $blab.slider =
     z: slid "z"
+
 
 # tables
 
@@ -182,9 +184,10 @@ compute = ()->
 
     console.log "######## pre-code ########"
 
-    # refresh sink sheets
+    # refresh sink
     for sl of $blab.slider
         $blab.slider[sl].update()
+        console.log $blab.slider[sl].stringify()
 
     # local copy of vars 
     for sh of $blab.sheet
