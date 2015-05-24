@@ -3,6 +3,7 @@
     "c3.min.js",
     "http://handsontable.com/dist/handsontable.full.js",
     "http://code.jquery.com/ui/1.11.4/jquery-ui.js",
+    "marked.min.js",
     "main.html",
     "main.css",
     "c3.css",

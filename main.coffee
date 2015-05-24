@@ -1,3 +1,14 @@
+
+marked.setOptions
+    renderer: new (marked.Renderer)
+    gfm: true
+    tables: true
+    breaks: false
+    pedantic: false
+    sanitize: true
+    smartLists: true
+    smartypants: false
+
 class Widget
 
     constructor: ->
@@ -8,6 +19,14 @@ class Widget
         JSON.stringify(@spec)
 
 
+class Markdown extends Widget
+
+    constructor: (@spec) ->
+    
+        container = $("##{@spec.id}")
+        container.html(marked(@spec.md))
+        
+        
 class Sheet extends Widget
     
     constructor: (@spec) ->
@@ -177,6 +196,42 @@ $blab.figure =
     fig1: fig1()
     fig2: fig2()
 
+# markdown
+
+md = """
+
+## markdown
+
+*emphasis*
+
+**bold**
+
+~~strike~~
+
+[marked + mathjax](http://kerzol.github.io/markdown-mathjax/editor.html)
+
+```javascript
+var s = "JavaScript syntax highlighting";
+alert(s);
+```
+
+| Tables        | Are           | Cool  |
+| ------------- |:-------------:| -----:|
+| col 3 is      | right-aligned | $1600 |
+| col 2 is      | centered      |   $12 |
+| zebra stripes | are neat      |    $1 |
+
+
+"""
+
+
+markdn = -> new Markdown
+    id: "content"
+    md: md 
+
+$blab.markdown =
+    md1: markdn()
+
 # user code
 
 
@@ -218,6 +273,12 @@ compute = ()->
     for f of $blab.figure
         $blab.figure[f].update()
         console.log $blab.figure[f].stringify()
+
+    console.log "#### mardowns ####"
+    for m of $blab.markdown
+        #$blab.markdown[m].update()
+        console.log $blab.markdown[m].stringify()
+
 
 compute()
 
