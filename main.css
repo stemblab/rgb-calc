@@ -1,3 +1,10 @@
+
+#app {
+width: 100%;
+height: 300px;
+border: 1px solid #c00;
+}
+
 .parameters {
     cursor: pointer;
     background: #ddf;
