@@ -6,6 +6,7 @@ $("#widget-menu").menu select: (event, ui) ->
     console.log "ui type?", ui.item[0].innerHTML
     return
 
+$("#tabs").tabs()
 
 
 marked.setOptions
@@ -79,8 +80,20 @@ class PlotXY extends Widget
 class Table extends Widget
     
     constructor: (@spec) ->
+
+        @spec.x ?= 100
+        @spec.y ?= 100
+        
         @sheet = $blab.sheet[@spec.id]
-        container = $("##{@spec.id}")[0]
+        container = $("##{@spec.id}")
+        container.append("<div class='hot'></div>")
+        container.css("position", "absolute")
+        #x = Math.round(Math.random()*100)
+        #y = Math.round(Math.random()*100)
+        #container.css("left", @spec.x)
+        #container.css("top", @spec.y)
+
+        hot = $("##{@spec.id} .hot")
         @defaults =
             data: @sheet.spec.data
             afterChange: (change, source) =>
@@ -89,7 +102,7 @@ class Table extends Widget
             rowHeaders: @sheet.rowHeaders
             colHeaders: @sheet.colHeaders
             contextMenu: false
-        @table = new Handsontable container, $.extend({}, @defaults, @spec)
+        @table = new Handsontable hot[0], $.extend({}, @defaults, @spec)
 
     update: ->
         @table.loadData @sheet.spec.data
