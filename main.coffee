@@ -81,8 +81,10 @@ class Table extends Widget
     
     constructor: (@spec) ->
 
-        @spec.x ?= 100
-        @spec.y ?= 100
+        randPos = (range, offset)->
+            "#{Math.round((Math.random()*range+offset)*100)}%"
+        @spec.x ?= randPos(0.8, 0.1)
+        @spec.y ?= randPos(0.8, 0.1)
         
         @sheet = $blab.sheet[@spec.id]
         container = $("##{@spec.id}")
@@ -90,8 +92,8 @@ class Table extends Widget
         container.css("position", "absolute")
         #x = Math.round(Math.random()*100)
         #y = Math.round(Math.random()*100)
-        #container.css("left", @spec.x)
-        #container.css("top", @spec.y)
+        container.css("left", @spec.x)
+        container.css("top", @spec.y)
 
         hot = $("##{@spec.id} .hot")
         @defaults =
@@ -152,6 +154,8 @@ class Slider extends Widget
    
 ## From GUI
 
+# {"id":"A","data":[[1,2],[3,4]],"compute":true}
+
 # sheets
 
 $blab.sheet = []
@@ -173,6 +177,8 @@ $blab.sheet['y'].colHeaders = ['i','ii','iii','iv','v','vi']
 
 $blab.sheet['q'].rowHeaders = ['one','two']
 $blab.sheet['q'].colHeaders = ['i','ii','iii','iv','v','vi']
+
+console.log "?????", $blab.sheet["y"]
 
 
 # slider
@@ -245,7 +251,6 @@ alert(s);
 
 
 """
-
 
 markdn = -> new Markdown
     id: "content"
