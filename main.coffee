@@ -1,4 +1,13 @@
 
+
+
+
+$("#widget-menu").menu select: (event, ui) ->
+    console.log "ui type?", ui.item[0].innerHTML
+    return
+
+
+
 marked.setOptions
     renderer: new (marked.Renderer)
     gfm: true
