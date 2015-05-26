@@ -186,12 +186,8 @@ slid = (id) -> new Slider
     id:id
     value: 3
 
-console.log "???"
-
 $blab.slider =
     z: slid "z"
-
-console.log "!!!"
 
 # tables
 

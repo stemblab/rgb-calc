@@ -4,8 +4,6 @@
     "http://handsontable.com/dist/handsontable.full.js",
     "http://code.jquery.com/ui/1.11.4/jquery-ui.js",
     "marked.min.js",
-    "underscore-min.js",
-    "github.js",
     "main.html",
     "main.css",
     "c3.css",
