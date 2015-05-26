@@ -1,7 +1,6 @@
 
 
 
-
 $("#widget-menu").menu select: (event, ui) ->
     console.log "ui type?", ui.item[0].innerHTML
     return
@@ -41,16 +40,16 @@ class Sheet extends Widget
     
     constructor: (@spec) ->
         @spec.data ?= [[0]]
-        @colHeaders ?= ("c#{k}" for k in [0...@spec.data[0].length])
-        @rowHeaders ?= ("r#{k}" for k in [0...@spec.data.length])
+        @spec.colHeaders ?= ("c#{k}" for k in [0...@spec.data[0].length])
+        @spec.rowHeaders ?= ("r#{k}" for k in [0...@spec.data.length])
 
     rowJson: ->
         x = {}
-        x[rh] = @spec.data[k] for rh, k in @rowHeaders
+        x[rh] = @spec.data[k] for rh, k in @spec.rowHeaders
         return x
 
     labelRows: ->
-        ([@rowHeaders[m]].concat row for row, m in @spec.data)
+        ([@spec.rowHeaders[m]].concat row for row, m in @spec.data)
 
     toLocal: ->
         eval("#{@spec.id} = $blab.sheet['#{@spec.id}'].spec.data")
@@ -101,8 +100,8 @@ class Table extends Widget
             afterChange: (change, source) =>
                 compute() if source is "edit" and @sheet.spec.compute
             columns: ({type: 'numeric'} for k in [1..@sheet.spec.data[0].length])
-            rowHeaders: @sheet.rowHeaders
-            colHeaders: @sheet.colHeaders
+            rowHeaders: @sheet.spec.rowHeaders
+            colHeaders: @sheet.spec.colHeaders
             contextMenu: false
         @table = new Handsontable hot[0], $.extend({}, @defaults, @spec)
 
@@ -140,10 +139,10 @@ class Slider extends Widget
                 compute()
 
         settings = $.extend({}, defaults, @spec)
-    
-        @container.find('.label').html(@sheet.rowHeaders[0])
+
+        @container.find('.label').html(@sheet.spec.rowHeaders[0])
         @container.css("width", settings.width)
-        
+
         @slider = @container.find('.slider')
         @slider.slider settings
 
@@ -159,7 +158,8 @@ class Slider extends Widget
 # sheets
 
 $blab.sheet = []
-sh = (id, data) -> new Sheet {id:id, data:data, compute: true}
+sh = (id, data) ->
+    new Sheet {id:id, data:data, compute: true}
 
 $blab.sheet =
     A: sh "A", [[1,2],[3,4]]
@@ -172,14 +172,13 @@ $blab.sheet =
     x1: sh "x1", [[30, 50, 100, 230, 300, 310]]
     y1: sh "y1", [[30, 200, 100, 400, 150, 250], [130, 300, 200, 300, 250, 450]]
 
-$blab.sheet['y'].rowHeaders = ['dA','dB']
-$blab.sheet['y'].colHeaders = ['i','ii','iii','iv','v','vi']
+$blab.sheet['y'].spec.rowHeaders = []
+$blab.sheet['y'].spec.colHeaders = []
+$blab.sheet['y'].spec.rowHeaders = ['dA','dB']
+$blab.sheet['y'].spec.colHeaders = ['i','ii','iii','iv','v','vi']
 
-$blab.sheet['q'].rowHeaders = ['one','two']
-$blab.sheet['q'].colHeaders = ['i','ii','iii','iv','v','vi']
-
-console.log "?????", $blab.sheet["y"]
-
+$blab.sheet['q'].spec.rowHeaders = ['one','two']
+$blab.sheet['q'].spec.colHeaders = ['i','ii','iii','iv','v','vi']
 
 # slider
 
@@ -187,9 +186,12 @@ slid = (id) -> new Slider
     id:id
     value: 3
 
+console.log "???"
+
 $blab.slider =
     z: slid "z"
 
+console.log "!!!"
 
 # tables
 
@@ -307,5 +309,22 @@ compute = ()->
         console.log $blab.markdown[m].stringify()
 
 
-compute()
+loadgist = (gistid, filename) ->
+    $.ajax(
+        url: "https://api.github.com/gists/#{gistid}"
+        type: 'GET'
+        dataType: 'jsonp').success((gistdata) ->
+        content = gistdata.data.files[filename].content
+        console.log "content???", content
+        compute()
+        return
+    ).error (e) ->
+        # ajax error
+        return
+    return
+
+loadgist("f673df3f600fdeb17608", "gistfile1.json");
+
+
+
 
