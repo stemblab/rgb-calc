@@ -153,10 +153,9 @@ class Slider extends Widget
    
 ## From GUI
 
-# {"id":"A","data":[[1,2],[3,4]],"compute":true}
-
 # sheets
 
+###
 $blab.sheet = []
 sh = (id, data) ->
     new Sheet {id:id, data:data, compute: true}
@@ -179,7 +178,9 @@ $blab.sheet['y'].spec.colHeaders = ['i','ii','iii','iv','v','vi']
 
 $blab.sheet['q'].spec.rowHeaders = ['one','two']
 $blab.sheet['q'].spec.colHeaders = ['i','ii','iii','iv','v','vi']
+###
 
+###
 # slider
 
 slid = (id) -> new Slider
@@ -257,6 +258,8 @@ markdn = -> new Markdown
 $blab.markdown =
     md1: markdn()
 
+###
+
 # user code
 
 
@@ -310,8 +313,18 @@ loadgist = (gistid, filename) ->
         url: "https://api.github.com/gists/#{gistid}"
         type: 'GET'
         dataType: 'jsonp').success((gistdata) ->
-        content = gistdata.data.files[filename].content
-        console.log "content???", content
+        specs = JSON.parse(gistdata.data.files[filename].content)
+        $blab.sheet = []
+        $blab.table = []
+
+        $blab.sheet[spec.id] = new Sheet spec for spec in specs.sheet
+        $blab.table[spec.id] = new Table spec for spec in specs.table
+        #$blab.sheet[spec.id] = new Sheet spec for spec in specs.sheet
+        #$blab.sheet[spec.id] = new Sheet spec for spec in specs.sheet
+
+        console.log "sheet A???", $blab.sheet["A"]
+        console.log "table A???", $blab.table["A"]
+
         compute()
         return
     ).error (e) ->
@@ -319,7 +332,7 @@ loadgist = (gistid, filename) ->
         return
     return
 
-loadgist("f673df3f600fdeb17608", "sheet.json");
+loadgist("f673df3f600fdeb17608", "app.json");
 
 
 
