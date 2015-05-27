@@ -150,6 +150,13 @@ class Slider extends Widget
 
     update: ->
         @sheet.spec.data[0][0] =  @slider.slider("value")
+
+
+toolbox =
+    sheet: Sheet    
+    figure: PlotXY
+    table: Table
+    markdown: Markdown
    
 ## From GUI
 
@@ -272,9 +279,11 @@ compute = ()->
         $blab.slider[sl].update()
         console.log $blab.slider[sl].stringify()
 
-    # local copy of vars 
-    for sh of $blab.sheet
-        $blab.sheet[sh].toLocal()
+    # local copy of vars
+    #console.log "?????", $blab.sheet 
+    for sym of $blab.sheet
+        #console.log "sh??", sym
+        $blab.sheet[sym].toLocal()
 
     console.log "######## user-code ########"
 
@@ -294,6 +303,7 @@ compute = ()->
 
     console.log "#### tables ####"
     for t of $blab.table
+        console.log "t???", t
         $blab.table[t].update()
         console.log $blab.table[t].stringify()
 
@@ -309,28 +319,27 @@ compute = ()->
 
 
 loadgist = (gistid, filename) ->
+
     $.ajax(
         url: "https://api.github.com/gists/#{gistid}"
         type: 'GET'
-        dataType: 'jsonp').success((gistdata) ->
+        dataType: 'jsonp'
+
+    ).success((gistdata) ->
         specs = JSON.parse(gistdata.data.files[filename].content)
-        $blab.sheet = []
-        $blab.table = []
 
-        $blab.sheet[spec.id] = new Sheet spec for spec in specs.sheet
-        $blab.table[spec.id] = new Table spec for spec in specs.table
-        #$blab.sheet[spec.id] = new Sheet spec for spec in specs.sheet
-        #$blab.sheet[spec.id] = new Sheet spec for spec in specs.sheet
+        build = (w) ->
+            $blab[w] = {}
+            $blab[w][spec.id] = new toolbox[w] spec for spec in specs[w]
 
-        console.log "sheet A???", $blab.sheet["A"]
-        console.log "table A???", $blab.table["A"]
+        for spec of specs
+            build(spec)
 
         compute()
-        return
+        
     ).error (e) ->
         # ajax error
         return
-    return
 
 loadgist("f673df3f600fdeb17608", "app.json");
 
