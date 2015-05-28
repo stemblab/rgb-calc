@@ -1,12 +1,9 @@
 
-
-
 $("#widget-menu").menu select: (event, ui) ->
     console.log "ui type?", ui.item[0].innerHTML
     return
 
 $("#tabs").tabs()
-
 
 marked.setOptions
     renderer: new (marked.Renderer)
@@ -52,16 +49,16 @@ class Sheet extends Widget
         ([@spec.rowHeaders[m]].concat row for row, m in @spec.data)
 
     toLocal: ->
-        eval("#{@spec.id} = $blab.sheet['#{@spec.id}'].spec.data")
+        eval("#{@spec.id} = $blab.component.sheet['#{@spec.id}'].spec.data")
 
     fromLocal: (u)->
-        $blab.sheet[@spec.id].spec.data = u
+        $blab.component.sheet[@spec.id].spec.data = u
 
 
 class PlotXY extends Widget
 
     constructor: (@spec) ->
-        @sheets = ($blab.sheet[id] for id in @spec.sheetIds)
+        @sheets = ($blab.component.sheet[id] for id in @spec.sheetIds)
         defaults = {}
         @chart = c3.generate(
             bindto: $("##{@spec.id}")[0]
@@ -85,12 +82,11 @@ class Table extends Widget
         @spec.x ?= randPos(0.8, 0.1)
         @spec.y ?= randPos(0.8, 0.1)
         
-        @sheet = $blab.sheet[@spec.id]
+        @sheet = $blab.component.sheet[@spec.id]
+
         container = $("##{@spec.id}")
         container.append("<div class='hot'></div>")
         container.css("position", "absolute")
-        #x = Math.round(Math.random()*100)
-        #y = Math.round(Math.random()*100)
         container.css("left", @spec.x)
         container.css("top", @spec.y)
 
@@ -114,7 +110,7 @@ class Slider extends Widget
 
     constructor: (@spec) ->
 
-        @sheet = $blab.sheet[@spec.id]
+        @sheet = $blab.component.sheet[@spec.id]
 
         @container = $("##{@spec.id}")
         @container.append("<div class='slider'></div>")
@@ -151,121 +147,12 @@ class Slider extends Widget
     update: ->
         @sheet.spec.data[0][0] =  @slider.slider("value")
 
-
 toolbox =
     sheet: Sheet    
     figure: PlotXY
     table: Table
     markdown: Markdown
    
-## From GUI
-
-# sheets
-
-###
-$blab.sheet = []
-sh = (id, data) ->
-    new Sheet {id:id, data:data, compute: true}
-
-$blab.sheet =
-    A: sh "A", [[1,2],[3,4]]
-    x: sh "x", [[5],[6]]
-    b: sh "b", [[0],[0]]
-    y: sh "y", [[30, 200, 100, 400, 150, 250],[50,  20,  10,  40,  15,  25]]
-    z: sh "z", [[50]]
-    q: sh "q", [[0, 0, 0, 0, 0, 0],[0, 0, 0, 0, 0, 0]]
-    u: sh "u"
-    x1: sh "x1", [[30, 50, 100, 230, 300, 310]]
-    y1: sh "y1", [[30, 200, 100, 400, 150, 250], [130, 300, 200, 300, 250, 450]]
-
-$blab.sheet['y'].spec.rowHeaders = []
-$blab.sheet['y'].spec.colHeaders = []
-$blab.sheet['y'].spec.rowHeaders = ['dA','dB']
-$blab.sheet['y'].spec.colHeaders = ['i','ii','iii','iv','v','vi']
-
-$blab.sheet['q'].spec.rowHeaders = ['one','two']
-$blab.sheet['q'].spec.colHeaders = ['i','ii','iii','iv','v','vi']
-###
-
-###
-# slider
-
-slid = (id) -> new Slider
-    id:id
-    value: 3
-
-$blab.slider =
-    z: slid "z"
-
-# tables
-
-tab = (id) -> new Table {id:id, compute:true}
-$blab.table =
-    A: tab "A"
-    x: tab "x"
-    b: tab "b"
-    y: tab "y"
-
-# figures
-
-fig1 =  -> new PlotXY
-    id: "fig1"
-    sheetIds: ["q"]
-    data:
-        x: ""
-        types: 
-            one: 'area'
-            two: 'area-spline'
-
-fig2 =  -> new PlotXY
-    id: "fig2"
-    sheetIds: ["x1", "q"]
-    data:
-        x: "r0"
-        types: 
-            one: 'spline'
-            two: 'line'
-
-$blab.figure =
-    fig1: fig1()
-    fig2: fig2()
-
-# markdown
-
-md = """
-
-## markdown
-
-*emphasis*
-
-**bold**
-
-~~strike~~
-
-[marked + mathjax](http://kerzol.github.io/markdown-mathjax/editor.html)
-
-```javascript
-var s = "JavaScript syntax highlighting";
-alert(s);
-```
-
-| Tables        | Are           | Cool  |
-| ------------- |:-------------:| -----:|
-| col 3 is      | right-aligned | $1600 |
-| col 2 is      | centered      |   $12 |
-| zebra stripes | are neat      |    $1 |
-
-
-"""
-
-markdn = -> new Markdown
-    id: "content"
-    md: md 
-
-$blab.markdown =
-    md1: markdn()
-
-###
 
 # user code
 
@@ -280,10 +167,8 @@ compute = ()->
         console.log $blab.slider[sl].stringify()
 
     # local copy of vars
-    #console.log "?????", $blab.sheet 
-    for sym of $blab.sheet
-        #console.log "sh??", sym
-        $blab.sheet[sym].toLocal()
+    for sym of $blab.component.sheet
+        $blab.component.sheet[sym].toLocal()
 
     console.log "######## user-code ########"
 
@@ -296,27 +181,18 @@ compute = ()->
 
     console.log "######## post-code ########"
 
-    console.log "#### sheets ####"
-    for s of $blab.sheet
-        $blab.sheet[s].fromLocal(eval(s))
-        console.log $blab.sheet[s].stringify()
+    $blab.spec = {}
+    for c of $blab.component
+        $blab.spec[c] = {}
+        for i of $blab.component[c]
+            $blab.spec[c][i] = $blab.component[c][i].spec
+            if c == "sheet"
+                $blab.component.sheet[i].fromLocal(eval(i))
+            else
+                $blab.component[c][i].update()
 
-    console.log "#### tables ####"
-    for t of $blab.table
-        console.log "t???", t
-        $blab.table[t].update()
-        console.log $blab.table[t].stringify()
-
-    console.log "#### figures ####"
-    for f of $blab.figure
-        $blab.figure[f].update()
-        console.log $blab.figure[f].stringify()
-
-    console.log "#### mardowns ####"
-    for m of $blab.markdown
-        #$blab.markdown[m].update()
-        console.log $blab.markdown[m].stringify()
-
+    console.log ">>>", JSON.stringify($blab.spec)
+    
 
 loadgist = (gistid, filename) ->
 
@@ -327,10 +203,11 @@ loadgist = (gistid, filename) ->
 
     ).success((gistdata) ->
         specs = JSON.parse(gistdata.data.files[filename].content)
-
         build = (w) ->
-            $blab[w] = {}
-            $blab[w][spec.id] = new toolbox[w] spec for spec in specs[w]
+            $blab["component"][w] = {}
+            $blab["component"][w][spec.id] = new toolbox[w] spec for spec in specs[w]
+
+        $blab["component"] = {}
 
         for spec of specs
             build(spec)
@@ -341,8 +218,6 @@ loadgist = (gistid, filename) ->
         # ajax error
         return
 
-loadgist("f673df3f600fdeb17608", "app.json");
-
-
+loadgist("f673df3f600fdeb17608", "app.json")
 
 
