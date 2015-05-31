@@ -1,9 +1,12 @@
+# developer data (gitignored)
+dev = $blab.resource "dev"
 
 $("#widget-menu").menu select: (event, ui) ->
     console.log "ui type?", ui.item[0].innerHTML
     return
 
 $("#tabs").tabs()
+
 
 marked.setOptions
     renderer: new (marked.Renderer)
@@ -152,7 +155,7 @@ toolbox =
     figure: PlotXY
     table: Table
     markdown: Markdown
-   
+    slider: Slider
 
 # user code
 
@@ -161,15 +164,17 @@ compute = ()->
 
     console.log "######## pre-code ########"
 
-    # refresh sink
-    for sl of $blab.slider
-        $blab.slider[sl].update()
-        console.log $blab.slider[sl].stringify()
+    # update sources
+    for c of $blab.component
+        for i of $blab.component[c]
+            item = $blab.component[c][i]
+            if item.spec.isSource is "true"
+                item.update()
 
     # local copy of vars
     for sym of $blab.component.sheet
         $blab.component.sheet[sym].toLocal()
-
+        
     console.log "######## user-code ########"
 
     fn = (A, x) ->
@@ -181,43 +186,84 @@ compute = ()->
 
     console.log "######## post-code ########"
 
+    # local vars -> sheets
+    for sym of $blab.component.sheet
+        $blab.component.sheet[sym].fromLocal(eval(sym))
+
+    # update sinks
+    for c of $blab.component
+        for i of $blab.component[c]
+            item = $blab.component[c][i]
+            item.update() if item.spec.isSink is "true"
+
+    # update spec
     $blab.spec = {}
     for c of $blab.component
         $blab.spec[c] = {}
         for i of $blab.component[c]
-            $blab.spec[c][i] = $blab.component[c][i].spec
-            if c == "sheet"
-                $blab.component.sheet[i].fromLocal(eval(i))
-            else
-                $blab.component[c][i].update()
+            item = $blab.component[c][i]
+            $blab.spec[c][i] = item.spec
 
     console.log ">>>", JSON.stringify($blab.spec)
+
+
+class App
+
+    token: dev.token
+    gistId: dev.gistId
     
+    constructor: ->
 
-loadgist = (gistid, filename) ->
+        github = new Github
+            token: @token
+            auth: "oauth"
 
-    $.ajax(
-        url: "https://api.github.com/gists/#{gistid}"
-        type: 'GET'
-        dataType: 'jsonp'
+        @gist = github.getGist(@gistId)
+        
+        console.log "gist", @gist
 
-    ).success((gistdata) ->
-        specs = JSON.parse(gistdata.data.files[filename].content)
-        build = (w) ->
-            $blab["component"][w] = {}
-            $blab["component"][w][spec.id] = new toolbox[w] spec for spec in specs[w]
+        @readGist()
 
+    readGist: ->
+        @gist.read((err, gist)=> @buildSpec(err,gist))
+
+    buildSpec: (err,gist) ->
+
+        specs = JSON.parse(gist.files["app.json"].content)
+
+        build = (item) ->
+            $blab["component"][item] = {}
+            for sym of specs[item]
+                $blab["component"][item][sym] = new toolbox[item] specs[item][sym]
+                
         $blab["component"] = {}
-
         for spec of specs
             build(spec)
 
-        compute()
-        
-    ).error (e) ->
-        # ajax error
-        return
+        @updateSpec()
+        @saveGist($blab.spec)
 
-loadgist("f673df3f600fdeb17608", "app.json")
+    saveGist: (json) ->
+        
+        data =
+            "description": "the description for this gist"
+            "files":
+                "app2.json":
+                    "content": JSON.stringify($blab.spec)
+
+        @gist.update(data, (err, gist) -> console.log "save?", err, gist)
+
+    updateSpec: ->
+
+        $blab.spec = {}
+        for c of $blab.component
+            $blab.spec[c] = {}
+            for i of $blab.component[c]
+                item = $blab.component[c][i]
+                $blab.spec[c][i] = item.spec
+
+        console.log ">>>", JSON.stringify($blab.spec)
+
+new App
 
 
