@@ -1,9 +1,10 @@
 # developer data (gitignored)
 dev = $blab.resource "dev"
 
-$("#widget-menu").menu select: (event, ui) ->
-    console.log "ui type?", ui.item[0].innerHTML
-    return
+
+#$("#widget-menu").menu onClick: (item) ->
+#    console.log "item", item
+
 
 $("#tabs").tabs()
 
@@ -207,8 +208,9 @@ compute = ()->
     console.log ">>>", JSON.stringify($blab.spec)
 
 
-class App
+class Broadsheet
 
+    # from dev.json
     token: dev.token
     gistId: dev.gistId
     
@@ -220,9 +222,10 @@ class App
 
         @gist = github.getGist(@gistId)
         
-        console.log "gist", @gist
-
-        @readGist()
+        $("#widget-menu").menu select: (event, ui) ->
+            switch ui.item[0].innerHTML
+                when "Read" then broadsheet.readGist()
+                when "Save" then broadsheet.saveGist()
 
     readGist: ->
         @gist.read((err, gist)=> @buildSpec(err,gist))
@@ -241,9 +244,9 @@ class App
             build(spec)
 
         @updateSpec()
-        @saveGist($blab.spec)
+        @saveGist()
 
-    saveGist: (json) ->
+    saveGist: () ->
         
         data =
             "description": "the description for this gist"
@@ -264,6 +267,10 @@ class App
 
         console.log ">>>", JSON.stringify($blab.spec)
 
-new App
+broadsheet = new Broadsheet
 
+#$("#widget-menu").menu select: (event, ui) ->
+#    switch ui.item[0].innerHTML
+#        when "Load" then broadsheet.readGist()
+#        when "Save" then broadsheet.saveGist()
 
