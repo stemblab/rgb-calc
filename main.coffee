@@ -1,13 +1,5 @@
-# developer data (gitignored)
-dev = $blab.resource "dev"
-
-
-#$("#widget-menu").menu onClick: (item) ->
-#    console.log "item", item
-
 
 $("#tabs").tabs()
-
 
 marked.setOptions
     renderer: new (marked.Renderer)
@@ -32,10 +24,11 @@ class Widget
 class Markdown extends Widget
 
     constructor: (@spec) ->
-    
+
         container = $("##{@spec.id}")
-        container.html(marked(@spec.md))
-        
+        md = (err, gist) =>
+            container.html marked(gist.files[@spec.id+".md"].content)
+        broadsheet.gist.read md
         
 class Sheet extends Widget
     
@@ -53,16 +46,16 @@ class Sheet extends Widget
         ([@spec.rowHeaders[m]].concat row for row, m in @spec.data)
 
     toLocal: ->
-        eval("#{@spec.id} = $blab.component.sheet['#{@spec.id}'].spec.data")
+        eval("#{@spec.id} = broadsheet.sheet['#{@spec.id}'].spec.data")
 
     fromLocal: (u)->
-        $blab.component.sheet[@spec.id].spec.data = u
+        broadsheet.sheet[@spec.id].spec.data = u
 
 
 class PlotXY extends Widget
 
     constructor: (@spec) ->
-        @sheets = ($blab.component.sheet[id] for id in @spec.sheetIds)
+        @sheets = (broadsheet.sheet[id] for id in @spec.sheetIds)
         defaults = {}
         @chart = c3.generate(
             bindto: $("##{@spec.id}")[0]
@@ -86,7 +79,7 @@ class Table extends Widget
         @spec.x ?= randPos(0.8, 0.1)
         @spec.y ?= randPos(0.8, 0.1)
         
-        @sheet = $blab.component.sheet[@spec.id]
+        @sheet = broadsheet.sheet[@spec.id]
 
         container = $("##{@spec.id}")
         container.append("<div class='hot'></div>")
@@ -114,7 +107,7 @@ class Slider extends Widget
 
     constructor: (@spec) ->
 
-        @sheet = $blab.component.sheet[@spec.id]
+        @sheet = broadsheet.sheet[@spec.id]
 
         @container = $("##{@spec.id}")
         @container.append("<div class='slider'></div>")
@@ -165,16 +158,15 @@ compute = ()->
 
     console.log "######## pre-code ########"
 
-    # update sources
-    for c of $blab.component
-        for i of $blab.component[c]
-            item = $blab.component[c][i]
+    for type of broadsheet.component
+        for i of broadsheet.component[type]
+            item = broadsheet.component[type][i]
+            console.log "item", item
             if item.spec.isSource is "true"
                 item.update()
 
-    # local copy of vars
-    for sym of $blab.component.sheet
-        $blab.component.sheet[sym].toLocal()
+    for sym of broadsheet.sheet
+        broadsheet.sheet[sym].toLocal()
         
     console.log "######## user-code ########"
 
@@ -188,33 +180,32 @@ compute = ()->
     console.log "######## post-code ########"
 
     # local vars -> sheets
-    for sym of $blab.component.sheet
-        $blab.component.sheet[sym].fromLocal(eval(sym))
+    for sym of broadsheet.sheet
+        broadsheet.sheet[sym].fromLocal(eval(sym))
 
     # update sinks
-    for c of $blab.component
-        for i of $blab.component[c]
-            item = $blab.component[c][i]
+    for c of broadsheet.component
+        for i of broadsheet.component[c]
+            item = broadsheet.component[c][i]
             item.update() if item.spec.isSink is "true"
 
-    # update spec
-    $blab.spec = {}
-    for c of $blab.component
-        $blab.spec[c] = {}
-        for i of $blab.component[c]
-            item = $blab.component[c][i]
-            $blab.spec[c][i] = item.spec
-
-    console.log ">>>", JSON.stringify($blab.spec)
-
+    # update netlist
+    broadsheet.updateNetlist()    
 
 class Broadsheet
 
     # from dev.json
+    dev = $blab.resource "dev"
     token: dev.token
     gistId: dev.gistId
     
     constructor: ->
+
+        @editor = ace.edit("editor")
+        @editor.setTheme("ace/theme/textmate")
+        @editor.getSession().setMode("ace/mode/json")
+        @editor.setOptions
+            fontSize: "14pt"
 
         github = new Github
             token: @token
@@ -227,50 +218,65 @@ class Broadsheet
                 when "Read" then broadsheet.readGist()
                 when "Save" then broadsheet.saveGist()
 
+    updateNetlist: ->
+        @netlist = {}
+        for c of broadsheet.component
+            @netlist[c] = {}
+            for i of broadsheet.component[c]
+                item = broadsheet.component[c][i]
+                @netlist[c][i] = item.spec
+        console.log "netlst", @netlist
+
     readGist: ->
-        @gist.read((err, gist)=> @buildSpec(err,gist))
+        fn = (err, gist) =>
+            console.log "gist", gist
+            @build(err,gist)
+        @gist.read(fn)
 
-    buildSpec: (err,gist) ->
+    build: (err,gist) ->
 
-        specs = JSON.parse(gist.files["app.json"].content)
+        # sheets
 
-        build = (item) ->
-            $blab["component"][item] = {}
-            for sym of specs[item]
-                $blab["component"][item][sym] = new toolbox[item] specs[item][sym]
-                
-        $blab["component"] = {}
-        for spec of specs
-            build(spec)
-
-        @updateSpec()
-        @saveGist()
-
-    saveGist: () ->
+        @sheet = {}
+        console.log "sheetJsn?", JSON.parse(gist.files["sheet.json"].content)
+        fn = (x) -> x
+        sheetJson = JSON.parse(gist.files["sheet.json"].content)
         
+        console.log "????", sheetJson
+        
+        for sym of sheetJson
+            @sheet[sym] = new toolbox["sheet"] sheetJson[sym]
+
+        # components
+
+        @component = {}
+        netJson = JSON.parse(gist.files["netlist.json"].content)
+
+        make = (item) =>
+            @component[item] = {}
+            for sym of netJson[item]
+                @component[item][sym] = new toolbox[item] netJson[item][sym]
+
+        for item of netJson
+            make(item)
+
+        # netlist
+
+        @updateNetlist()
+        
+
+    saveGist: ->
+
         data =
             "description": "the description for this gist"
             "files":
-                "app2.json":
-                    "content": JSON.stringify($blab.spec)
+                "netlist2.json":
+                    "content": JSON.stringify(@netlist, null, 2)
+                "sheet2.json":
+                    "content": JSON.stringify(@sheet, null, 2)
 
         @gist.update(data, (err, gist) -> console.log "save?", err, gist)
 
-    updateSpec: ->
-
-        $blab.spec = {}
-        for c of $blab.component
-            $blab.spec[c] = {}
-            for i of $blab.component[c]
-                item = $blab.component[c][i]
-                $blab.spec[c][i] = item.spec
-
-        console.log ">>>", JSON.stringify($blab.spec)
 
 broadsheet = new Broadsheet
-
-#$("#widget-menu").menu select: (event, ui) ->
-#    switch ui.item[0].innerHTML
-#        when "Load" then broadsheet.readGist()
-#        when "Save" then broadsheet.saveGist()
 
