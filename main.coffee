@@ -238,11 +238,11 @@ class Broadsheet
         # sheets
 
         @sheet = {}
-        console.log "sheetJsn?", JSON.parse(gist.files["sheet.json"].content)
+        console.log "A", JSON.parse(gist.files["sheet.json"].content)
         fn = (x) -> x
+
         sheetJson = JSON.parse(gist.files["sheet.json"].content)
-        
-        console.log "????", sheetJson
+        console.log "B", sheetJson
         
         for sym of sheetJson
             @sheet[sym] = new toolbox["sheet"] sheetJson[sym]
