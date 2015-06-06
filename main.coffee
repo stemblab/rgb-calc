@@ -1,34 +1,7 @@
 
 $("#tabs").tabs()
 
-marked.setOptions
-    renderer: new (marked.Renderer)
-    gfm: true
-    tables: true
-    breaks: false
-    pedantic: false
-    sanitize: true
-    smartLists: true
-    smartypants: false
-
-class Widget
-
-    constructor: ->
-
-    update: ->
-        
-    stringify: ->
-        JSON.stringify(@spec)
-
-
-class $blab.Markdown extends Widget
-
-    constructor: (@spec) ->
-
-        container = $("##{@spec.id}")
-        container.html marked(broadsheet.file["#{@spec.id}.md"])
-        
-class Sheet extends Widget
+class Sheet
     
     constructor: (@spec) ->
         @spec.data ?= [[0]]
@@ -49,8 +22,35 @@ class Sheet extends Widget
     fromLocal: (u)->
         broadsheet.sheet[@spec.id].spec.data = u
 
+class Component
 
-class $blab.PlotXY extends Widget
+    constructor: ->
+
+    update: ->
+        
+    stringify: ->
+        JSON.stringify(@spec)
+
+
+class $blab.Markdown extends Component
+
+    marked.setOptions
+        renderer: new marked.Renderer
+        gfm: true
+        tables: true
+        breaks: false
+        pedantic: false
+        sanitize: true
+        smartLists: true
+        smartypants: false
+    
+    constructor: (@spec, @file) ->
+
+        container = $("##{@spec.id}")
+        container.html marked(@file)
+        
+
+class $blab.PlotXY extends Component
 
     constructor: (@spec) ->
         @sheets = (broadsheet.sheet[id] for id in @spec.sheetIds)
@@ -68,7 +68,7 @@ class $blab.PlotXY extends Widget
     update: ->
         @chart.load(@getCols())
 
-class $blab.Table extends Widget
+class $blab.Table extends Component
     
     constructor: (@spec) ->
 
@@ -101,7 +101,7 @@ class $blab.Table extends Widget
         @table.render()
         
 
-class $blab.Slider extends Widget
+class $blab.Slider extends Component
 
     constructor: (@spec) ->
 
@@ -152,7 +152,6 @@ compute = ()->
     for type of broadsheet.component
         for i of broadsheet.component[type]
             item = broadsheet.component[type][i]
-            console.log "item", item
             if item.spec.isSource is "true"
                 item.update()
 
@@ -160,6 +159,8 @@ compute = ()->
         broadsheet.sheet[sym].toLocal()
         
     console.log "######## user-code ########"
+
+    # ??? eval broadsheet.file["user.coffee"] ???
 
     fn = (A, x) ->
         A.dot x
@@ -189,12 +190,6 @@ class Broadsheet
     
     constructor: ->
         
-        @editor = ace.edit("editor")
-        @editor.setTheme("ace/theme/textmate")
-        @editor.getSession().setMode("ace/mode/json")
-        @editor.setOptions
-            fontSize: "14pt"
-
         github = new Github
             token: @token
             auth: "oauth"
@@ -224,7 +219,7 @@ class Broadsheet
         tools = JSON.parse(@file["toolbox.json"])
         @toolbox[tool.id] = $blab[tool.id] for tool in tools
 
-        # sheets (data)
+        # (data) sheets
 
         @sheet = {}
         specs = JSON.parse(@file["sheet.json"])
@@ -233,14 +228,12 @@ class Broadsheet
         # components
 
         @component = {}
-
         make = (type) =>
             @component[type] = {}
             for spec in JSON.parse(@file["#{type}.json"])
-                @component[type][spec.id] = new @toolbox[type] spec
-
-        for type of @toolbox
-            make(type)
+                file = @file[spec.file]
+                @component[type][spec.id] = new @toolbox[type](spec, file)
+        make(type) for type of @toolbox
 
     saveGist: ->
 

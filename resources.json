@@ -1,6 +1,5 @@
 [
     {"url": "dev.json", "id": "dev"},
-    "http://cdnjs.cloudflare.com/ajax/libs/ace/1.1.9/ace.js",
     "underscore-min.js",
     "/puzlet/js/d3.min.js",
     "c3.min.js",
