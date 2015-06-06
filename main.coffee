@@ -21,14 +21,12 @@ class Widget
         JSON.stringify(@spec)
 
 
-class Markdown extends Widget
+class $blab.Markdown extends Widget
 
     constructor: (@spec) ->
 
         container = $("##{@spec.id}")
-        md = (err, gist) =>
-            container.html marked(gist.files[@spec.id+".md"].content)
-        broadsheet.gist.read md
+        container.html marked(broadsheet.file["#{@spec.id}.md"])
         
 class Sheet extends Widget
     
@@ -52,7 +50,7 @@ class Sheet extends Widget
         broadsheet.sheet[@spec.id].spec.data = u
 
 
-class PlotXY extends Widget
+class $blab.PlotXY extends Widget
 
     constructor: (@spec) ->
         @sheets = (broadsheet.sheet[id] for id in @spec.sheetIds)
@@ -70,7 +68,7 @@ class PlotXY extends Widget
     update: ->
         @chart.load(@getCols())
 
-class Table extends Widget
+class $blab.Table extends Widget
     
     constructor: (@spec) ->
 
@@ -103,7 +101,7 @@ class Table extends Widget
         @table.render()
         
 
-class Slider extends Widget
+class $blab.Slider extends Widget
 
     constructor: (@spec) ->
 
@@ -144,15 +142,8 @@ class Slider extends Widget
     update: ->
         @sheet.spec.data[0][0] =  @slider.slider("value")
 
-toolbox =
-    sheet: Sheet    
-    figure: PlotXY
-    table: Table
-    markdown: Markdown
-    slider: Slider
 
 # user code
-
 
 compute = ()->
 
@@ -189,9 +180,6 @@ compute = ()->
             item = broadsheet.component[c][i]
             item.update() if item.spec.isSink is "true"
 
-    # update netlist
-    broadsheet.updateNetlist()    
-
 class Broadsheet
 
     # from dev.json
@@ -200,7 +188,7 @@ class Broadsheet
     gistId: dev.gistId
     
     constructor: ->
-
+        
         @editor = ace.edit("editor")
         @editor.setTheme("ace/theme/textmate")
         @editor.getSession().setMode("ace/mode/json")
@@ -218,60 +206,47 @@ class Broadsheet
                 when "Read" then broadsheet.readGist()
                 when "Save" then broadsheet.saveGist()
 
-    updateNetlist: ->
-        @netlist = {}
-        for c of broadsheet.component
-            @netlist[c] = {}
-            for i of broadsheet.component[c]
-                item = broadsheet.component[c][i]
-                @netlist[c][i] = item.spec
-        console.log "netlst", @netlist
+        @readGist()
 
     readGist: ->
         fn = (err, gist) =>
-            console.log "gist", gist
+            @file = {}
+            @file[gf] = gist.files[gf].content for gf of gist.files
             @build(err,gist)
+
         @gist.read(fn)
 
     build: (err,gist) ->
 
-        # sheets
+        # toolbox (of widgets) 
+
+        @toolbox={}
+        tools = JSON.parse(@file["toolbox.json"])
+        @toolbox[tool.id] = $blab[tool.id] for tool in tools
+
+        # sheets (data)
 
         @sheet = {}
-        console.log "A", JSON.parse(gist.files["sheet.json"].content)
-        fn = (x) -> x
-
-        sheetJson = JSON.parse(gist.files["sheet.json"].content)
-        console.log "B", sheetJson
-        
-        for sym of sheetJson
-            @sheet[sym] = new toolbox["sheet"] sheetJson[sym]
+        specs = JSON.parse(@file["sheet.json"])
+        @sheet[spec.id] = new Sheet spec for spec in specs 
 
         # components
 
         @component = {}
-        netJson = JSON.parse(gist.files["netlist.json"].content)
 
-        make = (item) =>
-            @component[item] = {}
-            for sym of netJson[item]
-                @component[item][sym] = new toolbox[item] netJson[item][sym]
+        make = (type) =>
+            @component[type] = {}
+            for spec in JSON.parse(@file["#{type}.json"])
+                @component[type][spec.id] = new @toolbox[type] spec
 
-        for item of netJson
-            make(item)
-
-        # netlist
-
-        @updateNetlist()
-        
+        for type of @toolbox
+            make(type)
 
     saveGist: ->
 
         data =
             "description": "the description for this gist"
             "files":
-                "netlist2.json":
-                    "content": JSON.stringify(@netlist, null, 2)
                 "sheet2.json":
                     "content": JSON.stringify(@sheet, null, 2)
 
