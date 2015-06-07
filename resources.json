@@ -10,5 +10,9 @@
     "main.html",
     "main.css",
     "c3.css",
-    "main.coffee"
+    "markdown.coffee",
+    "plotxy.coffee",
+    "table.coffee",
+    "slider.coffee", 
+    "app.coffee"
 ]
