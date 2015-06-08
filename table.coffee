@@ -1,42 +1,29 @@
-
-class Component
-
-    constructor: ->
-
-    update: ->
-        
-    stringify: ->
-        JSON.stringify(@spec)
-
-class $blab.Table extends Component
+class $blab.Table extends $blab.Component
     
-    constructor: (@spec, sheet) ->
+    constructor: (@spec, sheet, file) ->
 
-        randPos = (range, offset)->
-            "#{Math.round((Math.random()*range+offset)*100)}%"
-        @spec.x ?= randPos(0.8, 0.1)
-        @spec.y ?= randPos(0.8, 0.1)
-        
         @sheet = sheet[@spec.id]
 
-        container = $("##{@spec.id}")
-        container.append("<div class='hot'></div>")
-        container.css("position", "absolute")
-        container.css("left", @spec.x)
-        container.css("top", @spec.y)
+        container = $("##{@spec.containerId}")
+        container.append("<div id='Table-#{@spec.id}' class='hot'></div>")
 
-        hot = $("##{@spec.id} .hot")
-        @defaults =
-            data: @sheet.spec.data
+        hot = $("#Table-#{@spec.id}")
+        hot.css("position", "absolute")
+        hot.css("left", @spec.x)
+        hot.css("top", @spec.y)
+
+        defaults =
+            data: @sheet.data
             afterChange: (change, source) =>
-                $blab.compute() if source is "edit" and @sheet.spec.compute
-            columns: ({type: 'numeric'} for k in [1..@sheet.spec.data[0].length])
-            rowHeaders: @sheet.spec.rowHeaders
-            colHeaders: @sheet.spec.colHeaders
+                $blab.compute() if source is "edit" and @spec.compute
+            columns: ({type: 'numeric'} for k in [1..@sheet.data[0].length])
+            rowHeaders: @sheet.rowHeaders
+            colHeaders: @sheet.colHeaders
             contextMenu: false
-        @table = new Handsontable hot[0], $.extend({}, @defaults, @spec)
+            
+        @table = new Handsontable hot[0], $.extend({}, defaults, @spec)
 
     update: ->
-        @table.loadData @sheet.spec.data
+        @table.loadData @sheet.data
         @table.render()
         
