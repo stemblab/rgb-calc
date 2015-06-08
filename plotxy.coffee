@@ -1,16 +1,6 @@
-class Component
+class $blab.PlotXY extends $blab.Component
 
-    constructor: ->
-
-    update: ->
-        
-    stringify: ->
-        JSON.stringify(@spec)
-
-class $blab.PlotXY extends Component
-
-    constructor: (@spec, sheet) ->
-        #@sheets = (app.sheet[id] for id in @spec.sheetIds)
+    constructor: (@spec, sheet, file) ->
         @sheets = (sheet[id] for id in @spec.sheetIds)
         defaults = {}
         @chart = c3.generate(
