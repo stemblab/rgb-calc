@@ -1,15 +1,4 @@
-
-class Component
-
-    constructor: ->
-
-    update: ->
-        
-    stringify: ->
-        JSON.stringify(@spec)
-
-
-class $blab.Markdown extends Component
+class $blab.Markdown extends $blab.Component
 
     marked.setOptions
         renderer: new marked.Renderer
@@ -21,10 +10,10 @@ class $blab.Markdown extends Component
         smartLists: true
         smartypants: false
     
-    constructor: (@spec, @sheet, @file) ->
+    constructor: (@spec, sheet, file) ->
 
-        console.log "spec", @spec
+        @md = file[@spec.fileName]
         
         container = $("##{@spec.id}")
-        container.html marked(@file[@spec.file])
+        container.html marked(@md)
         
