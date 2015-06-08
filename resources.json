@@ -10,6 +10,7 @@
     "main.html",
     "main.css",
     "c3.css",
+    "component.coffee",
     "markdown.coffee",
     "plotxy.coffee",
     "table.coffee",
