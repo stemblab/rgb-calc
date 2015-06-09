@@ -4,18 +4,13 @@ class $blab.Slider extends $blab.Component
 
         super(@spec, sheet, file)
         
-        @block.append("<div class='slider'/>")
         @block.append("<div class='label'/>")
         @block.append("<input type='text' readonly class='report'>")
 
         label = @block.children(".label")
         label.html(@sheet.spec.rowHeaders[0])
         
-        @slider = @block.children(".slider")
-        @slider.css("position", "absolute")
-        @slider.css("left", @spec.x)
-        @slider.css("top", @spec.y)
-        @slider.css("width", "100px")
+        @block.css("width", "100px")
 
         defaults =
             width: 500
@@ -28,10 +23,10 @@ class $blab.Slider extends $blab.Component
                 $blab.compute()
 
         settings = $.extend({}, defaults, @spec)
-        @slider.slider settings
+        @main.slider settings
 
         report = @block.children(".report")
-        report.val @slider.slider("value")
+        report.val @main.slider("value")
 
     update: ->
-        @sheet.spec.data[0][0] = @slider.slider("value")
+        @sheet.spec.data[0][0] = @main.slider("value")

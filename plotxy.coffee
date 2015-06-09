@@ -4,13 +4,10 @@ class $blab.PlotXY extends $blab.Component
 
         super(@spec, sheet, file)
         
-        @block.append("<div class='c3plot'/>")
-        c3plot = @block.children(".c3plot")
-
         defaults = {}
 
         @chart = c3.generate(
-            bindto: c3plot[0]
+            bindto: @main[0]
             data: $.extend({}, defaults, @spec.data, @getCols())
         )
 

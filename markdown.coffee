@@ -14,9 +14,6 @@ class $blab.Markdown extends $blab.Component
 
         super(@spec, sheet, file)
         
-        @block.append("<div class='markdown'/>")
-        markdown = @block.children(".markdown")
-        
         @md = file[@spec.fileName]
-        markdown.html marked(@md)
+        @main.html marked(@md)
         

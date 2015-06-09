@@ -4,13 +4,6 @@ class $blab.Table extends $blab.Component
 
         super(@spec, sheet, file)
 
-        @block.css("position", "absolute")
-        @block.css("left", @spec.x)
-        @block.css("top", @spec.y)
-
-        @block.append("<div class='hot'/>")
-        hot = @block.children(".hot")
-
         defaults =
             data: @sheet.spec.data
             afterChange: (change, source) =>
@@ -20,7 +13,7 @@ class $blab.Table extends $blab.Component
             colHeaders: @sheet.spec.colHeaders
             contextMenu: false
             
-        @table = new Handsontable hot[0], $.extend({}, defaults, @spec)
+        @table = new Handsontable @main[0], $.extend({}, defaults, @spec)
 
     update: ->
         @table.loadData @sheet.spec.data
