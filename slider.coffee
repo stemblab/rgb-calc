@@ -13,7 +13,7 @@ class $blab.Slider extends $blab.Component
         box.append("<input type='text' readonly class='report'>")
 
         label = box.children(".label")
-        label.html(@sheet.rowHeaders[0])
+        label.html(@sheet.spec.rowHeaders[0])
         
         @slider = box.children(".slider")
         @slider.css("position", "absolute")
@@ -38,4 +38,4 @@ class $blab.Slider extends $blab.Component
         report.val @slider.slider("value")
 
     update: ->
-        @sheet.data[0][0] = @slider.slider("value")
+        @sheet.spec.data[0][0] = @slider.slider("value")
