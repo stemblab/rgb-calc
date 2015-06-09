@@ -12,8 +12,6 @@ class $blab.Component
         container = $("##{@spec.containerId}")
         container.append("<div id='#{blockId}' class='block'/>")
         @block = container.children("##{blockId}")
-
-        console.log "block>", @block
         
     update: ->
         
