@@ -12,8 +12,11 @@ class $blab.Markdown extends $blab.Component
     
     constructor: (@spec, sheet, file) ->
 
-        @md = file[@spec.fileName]
+        super(@spec, sheet, file)
         
-        container = $("##{@spec.id}")
-        container.html marked(@md)
+        @block.append("<div class='markdown'/>")
+        markdown = @block.children(".markdown")
+        
+        @md = file[@spec.fileName]
+        markdown.html marked(@md)
         

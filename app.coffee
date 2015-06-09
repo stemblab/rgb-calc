@@ -3,8 +3,6 @@ class Sheet
     
     constructor: (@spec) ->
         @spec.data ?= [[0]]
-        #@id = spec.id
-        #@data = spec.data
         @spec.colHeaders ?= ("c#{k}" for k in [0...@spec.data[0].length])
         @spec.rowHeaders ?= ("r#{k}" for k in [0...@spec.data.length])
 

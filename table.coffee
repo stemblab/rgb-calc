@@ -2,15 +2,14 @@ class $blab.Table extends $blab.Component
     
     constructor: (@spec, sheet, file) ->
 
-        @sheet = sheet[@spec.id]
+        super(@spec, sheet, file)
 
-        container = $("##{@spec.containerId}")
-        container.append("<div id='Table-#{@spec.id}' class='hot'></div>")
+        @block.css("position", "absolute")
+        @block.css("left", @spec.x)
+        @block.css("top", @spec.y)
 
-        hot = $("#Table-#{@spec.id}")
-        hot.css("position", "absolute")
-        hot.css("left", @spec.x)
-        hot.css("top", @spec.y)
+        @block.append("<div class='hot'/>")
+        hot = @block.children(".hot")
 
         defaults =
             data: @sheet.spec.data

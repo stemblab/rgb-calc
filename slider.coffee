@@ -1,30 +1,12 @@
 class $blab.Slider extends $blab.Component
 
-    constructor:  ->
+    constructor:  (@spec, sheet, file) ->
 
         super(@spec, sheet, file)
-        
-        
-        ###
-        if @spec.sheetIds
-            @sheet = (sheet[id] for id in @spec.sheetIds)
-        else
-            @sheet = sheet[@spec.id]
-        blockType = @constructor.name
-        blockId = "#{blockType}-#{@spec.id}"
-        container = $("##{@spec.containerId}")
-        container.append("<div id='#{blockId}' class='block'/>")
-        block = container.children("##{blockId}")
-        ###
-
-        console.log "???"
-        console.log "block>>", @block
         
         @block.append("<div class='slider'/>")
         @block.append("<div class='label'/>")
         @block.append("<input type='text' readonly class='report'>")
-
-
 
         label = @block.children(".label")
         label.html(@sheet.spec.rowHeaders[0])
